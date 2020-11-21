@@ -467,14 +467,17 @@ public class FirebaseData extends AppCompatActivity {
         }catch (Exception e){
             Toast.makeText(context, "NO HAY ID", Toast.LENGTH_SHORT).show();
         }
-        Toast.makeText(context, "ID USER:  "+idUser, Toast.LENGTH_SHORT).show();
-        Toast.makeText(context, "ID REGISTRO:  "+idRegistro, Toast.LENGTH_SHORT).show();
+        //Toast.makeText(context, "ID USER:  "+idUser, Toast.LENGTH_SHORT).show();
+        //Toast.makeText(context, "ID REGISTRO:  "+idRegistro, Toast.LENGTH_SHORT).show();
         return idRegistro;
     }
-    public String[] getSucRegistradasByUser(String idUser){
-        String [] sucRegs = null;
+    public String getSucPorRegistrar(){
+        return Global._dataSnapshot.child("usuarios").child(currentUserID).child("sucursales").getValue().toString();
+    }
+    public String getSucRegistradasByUser(){
+        String sucRegs = null;
         try{
-            sucRegs = Global._dataSnapshot.child("usuarios").child(idUser).child("sucRegistradas").getValue().toString().split(",");
+            sucRegs = Global._dataSnapshot.child("usuarios").child(currentUserID).child("sucRegistradas").getValue().toString();
 
         }catch (Exception e){
             this.updateSucRegistradas(currentUserID,"null");

@@ -49,6 +49,9 @@ public class Global {
     public static ArrayList<HashMap<String,String>> maq_Registradas = new ArrayList<>();
     // Datasnapshot
     public static DataSnapshot _dataSnapshot;
+    // Sucursales registradas por usuario, sucursales por registrar
+    public static String sucReg;
+    public static String sucPorReg;
 
 
     public static void dialogo(String texto, Context context)

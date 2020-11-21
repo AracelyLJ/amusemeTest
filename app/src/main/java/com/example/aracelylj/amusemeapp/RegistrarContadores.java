@@ -115,6 +115,9 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
 
     private String procesoPago="";
 
+    private String[] sucRegs;
+    private String[] sucPorReg;
+
     static final int REQUEST_IMAGE_CAPTURE = 1;
     private final int SEND_SMS_PERMISSION_REQUEST_CODE = 1;
 
@@ -143,6 +146,14 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
 
         Global.temp_Registradas = firebaseData.get_tempRegistradas();
         Global.temp_Faltantes = firebaseData.get_tempFaltantes();
+        Global.sucReg = firebaseData.getSucRegistradasByUser()+","+aliasMaqActual.charAt(0)+""+aliasMaqActual.charAt(1);
+        Global.sucPorReg = firebaseData.getSucPorRegistrar();
+        sucRegs = Global.sucReg.split(",");
+        sucPorReg = Global.sucPorReg.split(",");
+        Toast.makeText(getApplicationContext(), "REGISTRADAS> "+Global.sucReg, Toast.LENGTH_SHORT).show();
+        Toast.makeText(getApplicationContext(), "POR REGISTRAR> "+Global.sucPorReg, Toast.LENGTH_SHORT).show();
+        Toast.makeText(getApplicationContext(), "SIZES> "+sucPorReg.length+"--"+sucRegs.length, Toast.LENGTH_SHORT).show();
+
         //Toast.makeText(getApplicationContext(), "Faltantes: "+Global.temp_Faltantes+" Tam: "+Global.temp_Faltantes.size(), Toast.LENGTH_SHORT).show();
         //Toast.makeText(getApplicationContext(), "Registradas: "+Global.temp_Registradas+" Tam: "+Global.temp_Registradas.size(), Toast.LENGTH_SHORT).show();
 
@@ -728,8 +739,12 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
             new Thread(tsms).start();
             tsms = new ThreadSMS("4492121134","SE TERMINO DE REGISTRAR LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual));
             new Thread(tsms).start();
+            */
+
+
             firebaseData.cleanCollection("temp_Registradas_"+firebaseData.currentUserID);
-            mensajeFinal();*/
+
+            mensajeFinal();
         }
 
     }
