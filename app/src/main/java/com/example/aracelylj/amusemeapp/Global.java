@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 
 public class Global {
@@ -49,6 +50,10 @@ public class Global {
     public static ArrayList<HashMap<String,String>> maq_Registradas = new ArrayList<>();
     // Datasnapshot
     public static DataSnapshot _dataSnapshot;
+    // Sucursales registradas por usuario
+    public static List<String> sucReg = new ArrayList<>();
+    public static List<String> sucPorReg = new ArrayList<>();
+    public static ArrayList<String> arraySucReg;
 
 
     public static void dialogo(String texto, Context context)

@@ -94,13 +94,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Global.tiposycontadores = firebaseData.get_tiposContadores(Global.tipos);
         Global.maq_Registradas = firebaseData.get_maquinasRegistradas();
         firebaseData.getIdRegistroByUser(firebaseData.currentUserID);
-        String []sucRegs = firebaseData.getSucRegistradasByUser(firebaseData.currentUserID);
-        if (sucRegs!= null) {
+
+        /*if (sucRegs!= null) {
             for (int i = 0; i < sucRegs.length; i++)
                 Toast.makeText(getApplicationContext(), sucRegs[i], Toast.LENGTH_SHORT).show();
-        }
+        */
         Intent intent = getIntent();
         Bundle extras = intent.getExtras();
+
+        if(extras!=null){
+
+        }
 
     }
 

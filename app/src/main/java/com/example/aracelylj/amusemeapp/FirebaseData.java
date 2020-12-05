@@ -37,6 +37,7 @@ import com.google.firebase.storage.UploadTask;
 import org.w3c.dom.Document;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -467,20 +468,19 @@ public class FirebaseData extends AppCompatActivity {
         }catch (Exception e){
             Toast.makeText(context, "NO HAY ID", Toast.LENGTH_SHORT).show();
         }
-        Toast.makeText(context, "ID USER:  "+idUser, Toast.LENGTH_SHORT).show();
-        Toast.makeText(context, "ID REGISTRO:  "+idRegistro, Toast.LENGTH_SHORT).show();
+        //Toast.makeText(context, "ID USER:  "+idUser, Toast.LENGTH_SHORT).show();
+        //Toast.makeText(context, "ID REGISTRO:  "+idRegistro, Toast.LENGTH_SHORT).show();
         return idRegistro;
     }
-    public String[] getSucRegistradasByUser(String idUser){
-        String [] sucRegs = null;
-        try{
-            sucRegs = Global._dataSnapshot.child("usuarios").child(idUser).child("sucRegistradas").getValue().toString().split(",");
+    public List<String> getSucPorRegistrarByUser(String idUser){
 
-        }catch (Exception e){
-            this.updateSucRegistradas(currentUserID,"null");
-            Toast.makeText(context, "NO SE HAN REGISTRADO SUCURSALES ESTA SEMANA", Toast.LENGTH_SHORT).show();
-        }
-        return sucRegs;
+        return Arrays.asList(Global._dataSnapshot.child("usuarios").child(idUser).child("sucursales").getValue().toString().split(","));
+
+    }
+    public List<String> getSucRegistradasByUser(String idUser){
+
+        return Arrays.asList(Global._dataSnapshot.child("usuarios").child(idUser).child("sucRegistradas").getValue().toString().split(","));
+
     }
     public String getDepositoUsuario(String id){
         return Global._dataSnapshot.child("usuarios").child(id).child("porDepositar").getValue().toString();
@@ -615,6 +615,7 @@ public class FirebaseData extends AppCompatActivity {
 
         ref.child("usuarios").child(id).child("porDepositar").setValue(porDep+"");
     }
+
     public void updateSucRegistradas(String id, String sucRegistradas){
         ref.child("usuarios").child(id).child("sucRegistradas").setValue(sucRegistradas);
     }
@@ -685,6 +686,26 @@ public class FirebaseData extends AppCompatActivity {
                 }
             }
         }
+    }
+    public void reiniciarSucursal(){
+        /*Toast.makeText(context, "NumSemana: "+Global.numSemana, Toast.LENGTH_SHORT).show();
+        Toast.makeText(context, "MAQUINAS A BORRAR:", Toast.LENGTH_SHORT).show();
+        for (String i: Global.maqsxsucursal){
+            Toast.makeText(context, i, Toast.LENGTH_SHORT).show();
+
+        }*/
+        DataSnapshot dataSnapshot = Global._dataSnapshot.child("maquinasRegistradas");
+        for (DataSnapshot ds: dataSnapshot.getChildren()){
+            if (ds.child("semanaFiscal").getValue().toString().equals(Global.numSemana+"")
+                && Global.maqsxsucursal.contains(ds.child("alias").getValue().toString())
+                && ds.child("usuario").getValue().toString().equals(currentUserID)){
+                Toast.makeText(context, "Borrar: \n"+ds.getKey()+"\n"+ds.child("alias").getValue().toString(), Toast.LENGTH_SHORT).show();
+                this.ref.child("maquinasRegistradas").child(ds.getKey()).removeValue();
+            }
+            // CHECAR PRIMERO LA SEMANA FISCAL, LUEGO EL ALIAS
+            // BORRAR POR DS.GETKEY
+        }
+
     }
 
     public void uploadImage(Uri photoURI, String ubicacionImagen){

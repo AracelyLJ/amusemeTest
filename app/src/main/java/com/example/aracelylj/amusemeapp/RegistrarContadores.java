@@ -62,6 +62,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -108,6 +109,7 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
     private ArrayList<HashMap<String,String>> semana1 = new ArrayList<>();
     private ArrayList<HashMap<String,String>> semana2 = new ArrayList<>();
     private HashMap<String,String> contAnteriores = new HashMap<>();
+    private ArrayList<String> sucFaltantes = new ArrayList<>();
 
     private EnviarCorreo correo;
     private String destinatarioCorreo;
@@ -167,8 +169,34 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
         //Global.maq_Registradas = firebaseData.get_maquinasRegistradas();
         Global.maqsxsucursal = firebaseData.get_maqsBySucursal(aliasMaqActual.charAt(0)+""+aliasMaqActual.charAt(1),Global.maquinas);
 
-        //Global.dialogo("registradas:\n"+Global.maq_Registradas,RegistrarContadores.this);
-        //dineroPorPagar();
+        Global.sucPorReg = firebaseData.getSucPorRegistrarByUser(firebaseData.currentUserID);
+        //Toast.makeText(getApplicationContext(), Global.sucPorReg.toString(), Toast.LENGTH_SHORT).show();
+        Global.sucReg = firebaseData.getSucRegistradasByUser(firebaseData.currentUserID);
+        Global.arraySucReg = new ArrayList<>(Global.sucReg);
+        //Toast.makeText(getApplicationContext(), Global.sucReg.toString(), Toast.LENGTH_SHORT).show();
+        //Toast.makeText(getApplicationContext(), "sucporReg  "+Global.sucPorReg.size()+"   SucReg  "+Global.sucReg.size(), Toast.LENGTH_SHORT).show();
+
+        //firebaseData.reiniciarSucursal();
+        if (Global.sucReg.contains(aliasMaqActual.charAt(0)+""+aliasMaqActual.charAt(1))){
+            AlertDialog.Builder builder = new AlertDialog.Builder(RegistrarContadores.this);
+            builder.setMessage("Esta sucursal ya ha sido registrada, ¿desea volver a registrarla desde el inicio?")
+                    .setPositiveButton("SI", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            firebaseData.reiniciarSucursal();
+                            Global.arraySucReg.remove(aliasMaqActual.charAt(0)+""+aliasMaqActual.charAt(1));
+                            Global.sucReg = Global.arraySucReg;
+                        }
+                    })
+                    .setNegativeButton("NO", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            Intent inicio = new Intent(RegistrarContadores.this, MainActivity.class);
+                            startActivity(inicio);
+                        }
+                    })
+                    .setCancelable(false);
+            builder.create().show();
+        }
+
     }
 
     /******************** OBTENER UBICACIÓN ***************/
@@ -716,20 +744,26 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
             mensaje = "La máquina " + tipoMaqActual + " ha sido registrada. \nSucursal: "+sucursalMaqActual+" \nQuedan " + x + " por registrar.";
             Intent intent = new Intent(RegistrarContadores.this, MainActivity.class);
             startActivity(intent);
+            firebaseData.ref.child("usuarios").child(firebaseData.currentUserID).child("sucRegistradas").
+                    setValue(getStringSucReg());
         }else if(x==1){
             nuevaBurbuja(x);
             mensaje = "La máquina " + tipoMaqActual + " ha sido registrada. \nSucursal: "+sucursalMaqActual+" \nQueda " + x + " por registrar.";
            Intent intent = new Intent(RegistrarContadores.this, MainActivity.class);
             startActivity(intent);
+            firebaseData.ref.child("usuarios").child(firebaseData.currentUserID).child("sucRegistradas").
+                    setValue(getStringSucReg());
         }else{
             tsms = new ThreadSMS("4751073063","SE TERMINO DE REGISTRAR LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual));
             new Thread(tsms).start();
             /*tsms = new ThreadSMS("4491057920","SE TERMINO DE REGISTRAR LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual));
             new Thread(tsms).start();
             tsms = new ThreadSMS("4492121134","SE TERMINO DE REGISTRAR LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual));
-            new Thread(tsms).start();
+            new Thread(tsms).start();*/
+            //firebaseData.ref.child("reg_"+firebaseData.currentUserID).child("usuario").setValue("Global.s");???
             firebaseData.cleanCollection("temp_Registradas_"+firebaseData.currentUserID);
-            mensajeFinal();*/
+            //Global.sucReg.add(aliasMaqActual.charAt(0)+""+aliasMaqActual.charAt(1));
+            mensajeFinal();
         }
 
     }
@@ -938,23 +972,73 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
     }
     private void mensajeFinal()
     {
-        dineroPorPagar();
+
+        //dineroPorPagar();
+        // Obtener sucursales faltantes
+        String strSucFalt = "";
+        for (int i=0; i<Global.sucPorReg.size(); i++){
+            String cve = Global.sucPorReg.get(i);
+            if (!Global.sucReg.contains(cve) && !Global.sucPorReg.get(i).equals(aliasMaqActual.charAt(0)+""+aliasMaqActual.charAt(1))) {
+                sucFaltantes.add(Global.sucPorReg.get(i));
+                strSucFalt+=Global.sucursales.get(cve)+"\n";
+
+            }
+        }
+
         dialog = new Dialog(RegistrarContadores.this);
         //se asigna el layout
         dialog.setContentView(R.layout.cardview_message);
+        // Editar texto
+        TextView finalMsg = dialog.findViewById(R.id.textView2);
+        if (!sucFaltantes.isEmpty())
+            finalMsg.setText("Se terminó de registrar la sucursal: "+sucursalMaqActual+" \n\n Te faltan: \n"+strSucFalt);
+        else {
+            finalMsg.setText("Se terminó de registrar la sucursal: " + sucursalMaqActual + " \n\n ¡TERMINASTE DE REGISTRAR TODAS LAS SUCURSALES!");
+            finalMsg.setTextColor(getResources().getColor(R.color.colorRojo));
+        }
         //boton para cerrar dialog
         ImageView close = dialog.findViewById(R.id.imageView);
         close.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                dialog.dismiss();
-                Intent intent = new Intent(RegistrarContadores.this, MainActivity.class);
-                startActivity(intent);
+                //dialog.dismiss();
+                //Intent intent = new Intent(RegistrarContadores.this, MainActivity.class);
+                //startActivity(intent);
+            }
+        });
+        // Botón para enviar cálculos y actualizar BD
+        Button doneButton = dialog.findViewById(R.id.sucDoneButton);
+        doneButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String auxUpdate = "";
+
+                if (sucFaltantes.isEmpty()){
+                    firebaseData.ref.child("usuarios").child(firebaseData.currentUserID).child("sucRegistradas").setValue("");
+                }else{
+                    // Obtener String de sucursales registradas
+
+
+                    firebaseData.ref.child("usuarios").child(firebaseData.currentUserID).child("sucRegistradas").
+                            setValue(getStringSucReg()+aliasMaqActual.charAt(0)+""+aliasMaqActual.charAt(1)+",");
+
+                    dialog.dismiss();
+                    Intent intent = new Intent(RegistrarContadores.this, MainActivity.class);
+                    startActivity(intent);
+                }
             }
         });
         dialog.setCancelable(false);
         dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         dialog.show();
+    }
+    public String getStringSucReg(){
+        StringBuffer strSR = new StringBuffer();
+        for (String s : Global.sucReg){
+            strSR.append(s);
+            strSR.append(",");
+        }
+        return strSR.toString();
     }
     public void irAinicioDialog(String msg, String button){
         AlertDialog.Builder builder = new AlertDialog.Builder(RegistrarContadores.this);

@@ -3,4 +3,5 @@
     <string name="str_nomMaquina">\nREGISTRANDO: \nMáquina: %1$s  \nSucursal:  %2$s \n</string>
     <string name="str_contador">%1$s COUNTER</string>
 
+
 </resources>
