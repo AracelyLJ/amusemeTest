@@ -195,14 +195,6 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
             }
         }
 
-        //Toast.makeText(getApplicationContext(), "SEM1: "+semana1.toString(), Toast.LENGTH_SHORT).show();
-        //Toast.makeText(getApplicationContext(), "SEM2: "+semana2.toString(), Toast.LENGTH_SHORT).show();
-        //Global.dialogo("SEM1: \n"+semana1.toString(),RegistrarContadores.this);
-        //Global.dialogo("SEM2: \n"+semana2.toString(),RegistrarContadores.this);
-        //Toast.makeText(getApplicationContext(), "conMaqs: "+contadoresDeMaquinas.toString(), Toast.LENGTH_SHORT).show();
-        //Global.dialogo(Global.tiposycontadores.toString(),RegistrarContadores.this);
-
-
         if (Global.sucReg.contains(aliasMaqActual.charAt(0)+""+aliasMaqActual.charAt(1))){
             AlertDialog.Builder builder = new AlertDialog.Builder(RegistrarContadores.this);
             builder.setMessage("Esta sucursal ya ha sido registrada, ¿desea volver a registrarla desde el inicio?")
@@ -691,17 +683,17 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
         }
 
         // Si en alguna máquina se ganó algún premio
-        if (saca_premio(contAnteriores,contValues)) {
-            ThreadSMS tsms = new ThreadSMS("4751073063","--IMPORTANTE-- SE HAN GANADO PREMIOS EN LA MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)
-                    + " DE LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+"\nREGISTRADO POR USUARIO"+firebaseData.getUsuarioActivo());
-            new Thread(tsms).start();
-           tsms = new ThreadSMS("4491057920","--IMPORTANTE-- SE HAN GANADO PREMIOS EN LA MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)
-                    + " DE LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+"\nREGISTRADO POR USUARIO"+firebaseData.getUsuarioActivo());
-            new Thread(tsms).start();
-            tsms = new ThreadSMS("4492121134","--IMPORTANTE-- SE HAN GANADO PREMIOS EN LA MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)
-                    + " DE LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+"\nREGISTRADO POR USUARIO"+firebaseData.getUsuarioActivo());
-            new Thread(tsms).start();
-        }
+//        if (saca_premio(contAnteriores,contValues)) {
+//            ThreadSMS tsms = new ThreadSMS("4751073063","--IMPORTANTE-- SE HAN GANADO PREMIOS EN LA MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)
+//                    + " DE LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+"\nREGISTRADO POR USUARIO"+firebaseData.getUsuarioActivo());
+//            new Thread(tsms).start();
+//           tsms = new ThreadSMS("4491057920","--IMPORTANTE-- SE HAN GANADO PREMIOS EN LA MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)
+//                    + " DE LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+"\nREGISTRADO POR USUARIO"+firebaseData.getUsuarioActivo());
+//            new Thread(tsms).start();
+//            tsms = new ThreadSMS("4492121134","--IMPORTANTE-- SE HAN GANADO PREMIOS EN LA MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)
+//                    + " DE LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+"\nREGISTRADO POR USUARIO"+firebaseData.getUsuarioActivo());
+//            new Thread(tsms).start();
+//        }
 
 
         return contValues;
@@ -774,10 +766,10 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
 
         // ********** Realizar el registro
             // Enviar correo inicial
-        if (Global.temp_Registradas.isEmpty()){
-            ThreadCorreo tc = new ThreadCorreo(1);
-            new Thread(tc).start();
-        }
+//        if (Global.temp_Registradas.isEmpty()){
+//            ThreadCorreo tc = new ThreadCorreo(1);
+//            new Thread(tc).start();
+//        }
             // Comprobar datos y llenar
         if (Global.direccion==null) Global.direccion="Ubicacion desconocida";
         Global.actualizarHorayFecha();
@@ -799,15 +791,15 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
                 coinsReg = entry.getValue();
         }
 
-        ThreadSMS tsms = new ThreadSMS("4751073063","MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)+ " REGISTRADA."+
-                "\nSUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+" \nUSUARIO: "+firebaseData.getUsuarioActivo()+"\n VALOR CONTADOR: "+coinsReg);
-        new Thread(tsms).start();
-        tsms = new ThreadSMS("4491057920","MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)+ " REGISTRADA."+
-                "\nSUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+" \nUSUARIO: "+firebaseData.getUsuarioActivo()+"\n VALOR CONTADOR: "+coinsReg);
-        new Thread(tsms).start();
-        tsms = new ThreadSMS("4492121134","MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)+ " REGISTRADA."+
-                "\nSUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+" \nUSUARIO: "+firebaseData.getUsuarioActivo()+"\n VALOR CONTADOR: "+coinsReg);
-        new Thread(tsms).start();
+//        ThreadSMS tsms = new ThreadSMS("4751073063","MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)+ " REGISTRADA."+
+//                "\nSUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+" \nUSUARIO: "+firebaseData.getUsuarioActivo()+"\n VALOR CONTADOR: "+coinsReg);
+//        new Thread(tsms).start();
+//        tsms = new ThreadSMS("4491057920","MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)+ " REGISTRADA."+
+//                "\nSUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+" \nUSUARIO: "+firebaseData.getUsuarioActivo()+"\n VALOR CONTADOR: "+coinsReg);
+//        new Thread(tsms).start();
+//        tsms = new ThreadSMS("4492121134","MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)+ " REGISTRADA."+
+//                "\nSUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+" \nUSUARIO: "+firebaseData.getUsuarioActivo()+"\n VALOR CONTADOR: "+coinsReg);
+//        new Thread(tsms).start();
              //Update Data Base
         firebaseData.put_registroContador(nvoRegistro);
         firebaseData.put_tempRegistradas(aliasMaqActual);
@@ -836,9 +828,7 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
             firebaseData.ref.child("usuarios").child(firebaseData.currentUserID).child("sucRegistradas").
                     setValue(getStringSucReg());
         }else{
-            tsms = new ThreadSMS("4751073063","SE TERMINO DE REGISTRAR LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual));
-            new Thread(tsms).start();
-            tsms = new ThreadSMS("4491057920","SE TERMINO DE REGISTRAR LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual));
+            ThreadSMS tsms = new ThreadSMS("4491057920","SE TERMINO DE REGISTRAR LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual));
             new Thread(tsms).start();
             tsms = new ThreadSMS("4492121134","SE TERMINO DE REGISTRAR LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual));
             new Thread(tsms).start();
@@ -933,46 +923,46 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
         }
 
         //restasDeContadores = new HashMap<>(); // Contiene todas las maquinas y las restas de sus contadores
-        HashMap<String,Integer> contadores; // Contiene el valor de cada contador
-        int resta;
-        for (int i=0; i<semana1.size(); i++){
-            HashMap<String,String> aux = semana1.get(i);
-            //Toast.makeText(getApplicationContext(), i+"   Maquina: "+aux.get("alias"), Toast.LENGTH_SHORT).show();
-            //Toast.makeText(getApplicationContext(), "Conts: "+contadoresDeMaquinas.get(aux.get("alias")), Toast.LENGTH_SHORT).show();
-            contadores = new HashMap<>();
-            for (String c: Objects.requireNonNull(contadoresDeMaquinas.get(aux.get("alias")))){
-                //Toast.makeText(getApplicationContext(), c, Toast.LENGTH_SHORT).show();
-                //Toast.makeText(getApplicationContext(), "Sem1: "+semana1.get(i).get(c), Toast.LENGTH_SHORT).show();
-                //Toast.makeText(getApplicationContext(), "Sem2: "+semana2.get(i).get(c), Toast.LENGTH_SHORT).show();
-                if (semana1.size() == semana2.size()){
-                    resta = Integer.parseInt(Objects.requireNonNull(semana2.get(i).get(c))) - Integer.parseInt(Objects.requireNonNull(semana1.get(i).get(c)));
-                    contadores.put(c,resta);
-                }else {
-                    contadores.put(c,0);
-                }
-
-            }
-            restasDeContadores.put(aux.get("alias"),contadores);
-        }
+//        HashMap<String,Integer> contadores; // Contiene el valor de cada contador
+//        int resta;
+//        for (int i=0; i<semana1.size(); i++){
+//            HashMap<String,String> aux = semana1.get(i);
+//            //Toast.makeText(getApplicationContext(), i+"   Maquina: "+aux.get("alias"), Toast.LENGTH_SHORT).show();
+//            //Toast.makeText(getApplicationContext(), "Conts: "+contadoresDeMaquinas.get(aux.get("alias")), Toast.LENGTH_SHORT).show();
+//            contadores = new HashMap<>();
+//            for (String c: Objects.requireNonNull(contadoresDeMaquinas.get(aux.get("alias")))){
+//                //Toast.makeText(getApplicationContext(), c, Toast.LENGTH_SHORT).show();
+//                //Toast.makeText(getApplicationContext(), "Sem1: "+semana1.get(i).get(c), Toast.LENGTH_SHORT).show();
+//                //Toast.makeText(getApplicationContext(), "Sem2: "+semana2.get(i).get(c), Toast.LENGTH_SHORT).show();
+//                if (semana1.size() == semana2.size()){
+//                    resta = Integer.parseInt(Objects.requireNonNull(semana2.get(i).get(c))) - Integer.parseInt(Objects.requireNonNull(semana1.get(i).get(c)));
+//                    contadores.put(c,resta);
+//                }else {
+//                    contadores.put(c,0);
+//                }
+//
+//            }
+//            restasDeContadores.put(aux.get("alias"),contadores);
+//        }
 
         // Hacer multiplicaciones y divisiones
-        HashMap<String,HashMap<String,Integer>> productoFinal = new HashMap<>(); // Contiene todas las maquinas y las restas de sus contadores multiplicados y divididos
-        String cve = "";
-        for ( Map.Entry<String,HashMap<String,Integer>> entry:  restasDeContadores.entrySet()){
-            cve = entry.getKey().charAt(2)+""+entry.getKey().charAt(3)+"";
-            //Global.tiposycontadores.get(cve) // -> Hashmap cve y los contadores y sus multiplicadores y sus divisores
-            for(int i=0; i<Global.tiposycontadores.get(cve).size();i++){
-                String nomCont = Global.tiposycontadores.get(cve).get(i).get("contador");
-                Integer mult = Integer.valueOf(Objects.requireNonNull(Global.tiposycontadores.get(cve).get(i).get("multiplicador")));
-                int divi = Integer.parseInt(Objects.requireNonNull(Global.tiposycontadores.get(cve).get(i).get("divisor")));
-                Integer valor = Integer.valueOf(entry.getValue().get(nomCont))*mult/divi;
-                entry.getValue().put(nomCont,valor);
-            }
-        }
+//        HashMap<String,HashMap<String,Integer>> productoFinal = new HashMap<>(); // Contiene todas las maquinas y las restas de sus contadores multiplicados y divididos
+//        String cve = "";
+//        for ( Map.Entry<String,HashMap<String,Integer>> entry:  restasDeContadores.entrySet()){
+//            cve = entry.getKey().charAt(2)+""+entry.getKey().charAt(3)+"";
+//            //Global.tiposycontadores.get(cve) // -> Hashmap cve y los contadores y sus multiplicadores y sus divisores
+//            for(int i=0; i<Global.tiposycontadores.get(cve).size();i++){
+//                String nomCont = Global.tiposycontadores.get(cve).get(i).get("contador");
+//                Integer mult = Integer.valueOf(Objects.requireNonNull(Global.tiposycontadores.get(cve).get(i).get("multiplicador")));
+//                int divi = Integer.parseInt(Objects.requireNonNull(Global.tiposycontadores.get(cve).get(i).get("divisor")));
+//                Integer valor = Integer.valueOf(entry.getValue().get(nomCont))*mult/divi;
+//                entry.getValue().put(nomCont,valor);
+//            }
+//        }
 
-        reporte_ganancias(restasDeContadores);
-        ThreadCorreo tc = new ThreadCorreo(2);
-        new Thread(tc).start();
+        //reporte_ganancias(restasDeContadores);
+//        ThreadCorreo tc = new ThreadCorreo(2);
+//        new Thread(tc).start();
 
     }
 
@@ -1327,10 +1317,6 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
             }
         }catch (Exception e){
             Log.e("Error1", Objects.requireNonNull(e.getMessage()));
-            ThreadSMS tsms = new ThreadSMS("4751073063","Este es el error: "+e.getMessage());
-            new Thread(tsms).start();
-            tsms = new ThreadSMS("4751073063","Este es el error: "+e.toString());
-            new Thread(tsms).start();
         }
 
 
