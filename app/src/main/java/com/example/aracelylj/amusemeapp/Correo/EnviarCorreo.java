@@ -74,6 +74,7 @@ public class EnviarCorreo {
                 }
             });
 
+            Log.d("AQUÍ!!","antes de sesion");
             if(session != null){
                 MimeMessage message = new MimeMessage(session);
                 message.setFrom(new InternetAddress(correo));
@@ -83,12 +84,11 @@ public class EnviarCorreo {
 
                 Transport.send(message);
 
-
             }else{
-                Log.e("SESSION","Session = nulo");
+                Log.e("AQUI","Session = nulo");
             }
         } catch (Exception e){
-            Log.e("ERROR","Entra a catch "+e.toString());
+            Log.e("AQUI ERROR","Entra a catch "+e.toString());
             e.printStackTrace();
         }
         Log.e("AQUÍ!!","Termina de mandar correo");

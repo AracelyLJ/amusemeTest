@@ -348,13 +348,17 @@ public class FirebaseData extends AppCompatActivity {
         return maqRegs;
 
     }
-    public ArrayList<HashMap<String,String>> get_maquinasRegistradasXsemana(int numSemana, String sucursal, ArrayList<HashMap<String,String>> maquinasRegistradas){
+    public ArrayList<HashMap<String,String>> get_maquinasRegistradasXsemana(int numSemana, String sucursal){
         String cveSuc = sucursal.charAt(0)+""+sucursal.charAt(1);
         ArrayList<HashMap<String,String>> maquinasXsemana = new ArrayList<>();
-        for (HashMap<String, String> maquina: maquinasRegistradas){
+        ArrayList<String> agregadas = new ArrayList<>();
+
+        for (HashMap<String, String> maquina: Global.maq_Registradas){
             String cveAux = maquina.get("alias").charAt(0)+""+maquina.get("alias").charAt(1);
-            if (cveAux.equals(cveSuc) && maquina.get("semanaFiscal").equals(numSemana+"") && maquina.get("usuario").equals(currentUserID)){
+            if (cveAux.equals(cveSuc) && maquina.get("semanaFiscal").equals(numSemana+"") && maquina.get("usuario").equals(currentUserID)
+                    && !agregadas.contains(maquina.get("alias"))){
                 maquinasXsemana.add(maquina);
+                agregadas.add(maquina.get("alias"));
             }
         }
 
@@ -478,7 +482,6 @@ public class FirebaseData extends AppCompatActivity {
 
     }
     public List<String> getSucRegistradasByUser(String idUser){
-
         return Arrays.asList(Global._dataSnapshot.child("usuarios").child(idUser).child("sucRegistradas").getValue().toString().split(","));
 
     }
@@ -507,7 +510,7 @@ public class FirebaseData extends AppCompatActivity {
     }
     public void put_registroContador(Map<String,String> registroContador){
         this.ref.child("maquinasRegistradas").push().setValue(registroContador);
-        /*db.collection("maquinasRegistradas")
+        db.collection("maquinasRegistradas")
                 .add(registroContador)
                 .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
                     @Override
@@ -521,7 +524,7 @@ public class FirebaseData extends AppCompatActivity {
                         Log.w("TAG Listo", "Error adding document", e);
                         Toast.makeText(context, "Error agregando maquina visitada.", Toast.LENGTH_SHORT).show();
                     }
-                });*/
+                });
     }
     public void put_tempRegistradas(String maqAlias){
         this.ref.child("temp_Registradas_"+currentUserID).child(maqAlias).setValue(maqAlias);
