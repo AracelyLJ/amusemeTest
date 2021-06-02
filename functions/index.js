@@ -26,11 +26,20 @@ async function gettingData() {
   console.log(tXsucs);
 
   const totales = await calculoTotal(tXsucs);
-  console.log(totales);
+  // console.log(totales);
   const tots = new Map();
   tots.set("sucursales", tXsucs);
   tots.set("totales", totales);
+  await generarReporte(tXsucs, totales);
   return tots;
+}
+
+async function generarReporte(tXsuc, totales){
+  var report = "";
+  report += tXsuc.get('AP').get('*coins');
+  console.log("report")
+  console.log(report);
+  // Aqui crear un for para ir formando el reporte por cada miembro del hashmap
 }
 
 // PARA LOS CÁLCULOS
