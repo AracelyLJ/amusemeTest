@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.net.Uri;
 
 import com.firebase.client.DataSnapshot;
 
@@ -13,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 
 public class Global {
@@ -20,12 +22,14 @@ public class Global {
     //fecha
     public static Calendar calendar = Calendar.getInstance();
     public static int numSemana = calendar.get(Calendar.WEEK_OF_YEAR);
-    public static SimpleDateFormat formateador = new SimpleDateFormat("dd/MMMM/yyyy", new Locale("es_ES"));
+    // public static SimpleDateFormat formateador = new SimpleDateFormat("dd/MMMM/yyyy", new Locale("es_ES"));
+    public static SimpleDateFormat formateador = new SimpleDateFormat("yyyy/MM/dd", new Locale("es_ES"));
     public static Date fechaDate = new Date();
     //hora
     public static Calendar cal = Calendar.getInstance();
     public static Date date = cal.getTime();
-    public static DateFormat dateFormat = new SimpleDateFormat("HH:mma");
+    // public static DateFormat dateFormat = new SimpleDateFormat("HH:mma");
+    public static DateFormat dateFormat = new SimpleDateFormat("H:m", new Locale("es_ES"));
     // Contador de intentos de la cámara
     public static HashMap<String,Integer> intentos = new HashMap<>();
     // Contador burbujas
@@ -49,9 +53,11 @@ public class Global {
     public static ArrayList<HashMap<String,String>> maq_Registradas = new ArrayList<>();
     // Datasnapshot
     public static DataSnapshot _dataSnapshot;
-    // Sucursales registradas por usuario, sucursales por registrar
-    public static String sucReg;
-    public static String sucPorReg;
+    // Sucursales registradas por usuario
+    public static List<String> sucReg = new ArrayList<>();
+    public static List<String> sucPorReg = new ArrayList<>();
+    public static ArrayList<String> arraySucReg;
+    // public static ArrayList<Uri> arrayUris = new ArrayList<>();
 
 
     public static void dialogo(String texto, Context context)
@@ -67,12 +73,12 @@ public class Global {
     public static void actualizarHorayFecha(){
         Global.calendar = Calendar.getInstance();
         Global.numSemana = calendar.get(Calendar.WEEK_OF_YEAR);
-        Global.formateador = new SimpleDateFormat("dd/MMMM/yyyy", new Locale("es_ES"));
+        Global.formateador = new SimpleDateFormat("yyyy/MM/dd", new Locale("es_ES"));
         Global.fechaDate = new Date();
         //hora
         Global.cal = Calendar.getInstance();
         Global.date = cal.getTime();
-        Global.dateFormat = new SimpleDateFormat("HH:mma");
+        Global.dateFormat = new SimpleDateFormat("H:m");
 
     }
 

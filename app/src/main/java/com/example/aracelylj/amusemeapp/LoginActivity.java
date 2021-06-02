@@ -61,6 +61,7 @@ public class LoginActivity extends AppCompatActivity {
             progressDialog.setMessage("Ingresando...");
             progressDialog.setCancelable(false);
             progressDialog.show();
+
         }
 
         // Iniciar

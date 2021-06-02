@@ -31,10 +31,16 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.Toast;
 
+import com.android.volley.AuthFailureError;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
 import com.firebase.client.DataSnapshot;
 import com.firebase.client.Firebase;
 import com.firebase.client.FirebaseError;
 import com.firebase.client.ValueEventListener;
+import com.google.android.gms.tasks.Continuation;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -44,7 +50,15 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.functions.FirebaseFunctions;
+import com.google.firebase.functions.HttpsCallableResult;
+import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.firebase.messaging.FirebaseMessagingService;
+import com.google.gson.JsonObject;
 import com.google.zxing.Result;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.text.DateFormat;
@@ -69,6 +83,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Ubicacion u;
     private ProgressDialog progressDialog;
 
+    private FirebaseFunctions mFunctions;
+
+
     private int MY_PERMISSION = 1000;
 
     private static final long MIN_TIEMPO_ENTRE_UPDATES = 1000 * 60 * 1; //Minimo tiempo para updates en Milisegundos ( 1 minuto )
@@ -81,11 +98,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setContentView(R.layout.activity_main);
         checkDrawPermission();
 
+        FirebaseMessaging.getInstance().subscribeToTopic("enviaratodos").addOnCompleteListener(new OnCompleteListener<Void>() {
+            @Override
+            public void onComplete(@NonNull Task<Void> task) {
+                //Toast.makeText(getApplicationContext(), "suscrito al enviar a todos.", Toast.LENGTH_SHORT).show();
+            }
+        });
+        mFunctions = FirebaseFunctions.getInstance();
+
         // Variables
         //direccion = null;
         firebaseData = new FirebaseData(this);
         firebaseData.getDBFija();
-        String nomUser = firebaseData.getUsuarioActivo();
+        String nomUser = firebaseData.getUsuarioActivo(); /// ESTO NOSTA JALANDO
         //Toast.makeText(getApplicationContext(), "Bienvenid@ "+nomUser, Toast.LENGTH_SHORT).show();
         setTitle("Usuario: "+nomUser);
         //Toast.makeText(getApplicationContext(), "MÁQUINAS!! global: \n"+Global.maquinas, Toast.LENGTH_SHORT).show();
@@ -94,26 +119,47 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Global.tiposycontadores = firebaseData.get_tiposContadores(Global.tipos);
         Global.maq_Registradas = firebaseData.get_maquinasRegistradas();
         firebaseData.getIdRegistroByUser(firebaseData.currentUserID);
-        /*String []sucRegs = firebaseData.getSucRegistradasByUser(firebaseData.currentUserID);
-        if (sucRegs!= null) {
+
+        /*if (sucRegs!= null) {
             for (int i = 0; i < sucRegs.length; i++)
                 Toast.makeText(getApplicationContext(), sucRegs[i], Toast.LENGTH_SHORT).show();
-        }*/
+        */
         Intent intent = getIntent();
         Bundle extras = intent.getExtras();
 
+        if(extras!=null){
+
+        }
+
     }
 
+    private Task<String> getDataTest(String text) {
+        // Create the arguments to the callable function.
+        Map<String, Object> data = new HashMap<>();
+        data.put("text", text);
+        data.put("push", true);
 
-    /*@Override
-    public void onBackPressed() {
-        // Bloquea botón hacia atrás
-    }*/
+        return mFunctions
+                .getHttpsCallable("getData")
+                .call(data)
+                .continueWith(new Continuation<HttpsCallableResult, String>() {
+                    @Override
+                    public String then(@NonNull Task<HttpsCallableResult> task) throws Exception {
+                        // This continuation runs on either success or failure, but if the task
+                        // has failed then getResult() will throw an Exception which will be
+                        // propagated down.
+                        String result = (String) task.getResult().getData();
+                        Toast.makeText(getApplicationContext(), result, Toast.LENGTH_SHORT).show();
+                        return result;
+                    }
+                });
+    }
     @Override
     public void onClick(View v) {
         switch (v.getId()){
             case R.id.registrarVisita:
                 Escanear();
+                // addMessage("hola");
                 break;
             case R.id.cerrarSesionUser:
                 FirebaseAuth.getInstance().signOut();
@@ -121,14 +167,108 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case R.id.registrarContadores:
                 EscanearyRegistrar();
+                // llamaratopico();
                 break;
             case R.id.registrarDeposito:
                 Intent intent = new Intent(MainActivity.this,RegistrarDeposito.class);
                 startActivity(intent);
+                // llamarespecifico();
                 break;
             default:
                 break;
         }
+    }
+
+    private void llamaratopico(){
+        RequestQueue myrequest = Volley.newRequestQueue(getApplicationContext());
+        JSONObject json = new JSONObject();
+
+        try{
+            //String token = "cerF9wJUpXM:APA91bFcbACzbDSo7Xg3rX2jEw1_nYAMjLB6lOdKIIE9iT7ngfDsqqwUt2rDP5IynxHsQg12tNpAI3g3YyIZ0qqggGQoxRGsdVK5woEldyBXpqB-Dm1Du9nj4wOcENQWnO8umyJGzT7t";
+            Toast.makeText(getApplicationContext(), "SE MANDA NOTIF A ", Toast.LENGTH_SHORT).show();
+            json.put("to","/topics/"+"enviaratodos");
+            JSONObject notificacion = new JSONObject();
+            notificacion.put("titulo","soy un titulo");
+            notificacion.put("detalle", "soy un detalle");
+
+            json.put("data", notificacion);
+
+            String URL = "https://fcm.googleapis.com/fcm/send";
+            JsonObjectRequest request = new JsonObjectRequest(Request.Method.POST, URL, json, null, null){
+                @Override
+                public Map<String, String> getHeaders() {
+                    Map<String, String> header = new HashMap<>();
+                    header.put("content-type", "application/json");
+                    header.put("authorization", "key=AAAA4oqpl7Y:APA91bFX936OVFETu4WooaKaXT1i-p1cmU7Uek9-5ogF-BoKMldHc9rWZwpVWLvpxN2NgKEN6H7Oe7VOky4xQO6k-m_mB1qXRG_S0i9nC8QA8NAQgSvoGCFju5PWULLcsQedQjGcdZxg");
+                    return header;
+
+                }
+            };
+            myrequest.add(request);
+
+
+
+        }catch (JSONException e){
+            e.printStackTrace();
+        }
+    }
+
+    private void llamarespecifico(){
+        RequestQueue myrequest = Volley.newRequestQueue(getApplicationContext());
+        JSONObject json = new JSONObject();
+
+        try{
+            String token = "cerF9wJUpXM:APA91bFcbACzbDSo7Xg3rX2jEw1_nYAMjLB6lOdKIIE9iT7ngfDsqqwUt2rDP5IynxHsQg12tNpAI3g3YyIZ0qqggGQoxRGsdVK5woEldyBXpqB-Dm1Du9nj4wOcENQWnO8umyJGzT7t";
+            Toast.makeText(getApplicationContext(), "SE MANDA NOTIF A "+token, Toast.LENGTH_SHORT).show();
+            json.put("to",token);
+            JSONObject notificacion = new JSONObject();
+            notificacion.put("titulo","soy un titulo");
+            notificacion.put("detalle", "soy un detalle");
+
+            json.put("data", notificacion);
+
+            String URL = "https://fcm.googleapis.com/fcm/send";
+            JsonObjectRequest request = new JsonObjectRequest(Request.Method.POST, URL, json, null, null){
+                @Override
+                public Map<String, String> getHeaders() {
+                    Map<String, String> header = new HashMap<>();
+                    header.put("content-type", "application/json");
+                    header.put("authorization", "key=AAAA4oqpl7Y:APA91bFX936OVFETu4WooaKaXT1i-p1cmU7Uek9-5ogF-BoKMldHc9rWZwpVWLvpxN2NgKEN6H7Oe7VOky4xQO6k-m_mB1qXRG_S0i9nC8QA8NAQgSvoGCFju5PWULLcsQedQjGcdZxg");
+                    return header;
+
+                }
+            };
+            myrequest.add(request);
+
+
+
+        }catch (JSONException e){
+            e.printStackTrace();
+        }
+    }
+
+    public Task<String> addMessage(String text) {
+        // Create the arguments to the callable function.
+        Map<String, Object> data = new HashMap<>();
+        data.put("text", text);
+        data.put("push", true);
+
+        Toast.makeText(getApplicationContext(), "DENTRO DE FUNCIOOOON", Toast.LENGTH_SHORT).show();
+
+        return mFunctions
+                .getHttpsCallable("https_function")
+                .call(data)
+                .continueWith(new Continuation<HttpsCallableResult, String>() {
+                    @Override
+                    public String then(@NonNull Task<HttpsCallableResult> task) throws Exception {
+                        // This continuation runs on either success or failure, but if the task
+                        // has failed then getResult() will throw an Exception which will be
+                        // propagated down.
+                        String result = (String) task.getResult().getData();
+                        Toast.makeText(getApplicationContext(), result, Toast.LENGTH_SHORT).show();
+                        return result;
+                    }
+                });
     }
 
     /************************ PRESIONA ATRÁS EN LAS LOS LECTORES QR *******************/
@@ -235,7 +375,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 Map<String,String> visitada = new HashMap<>();
                 visitada.put("nombre",maquina);
                 visitada.put("fecha",Global.formateador.format(Global.fechaDate));
-                visitada.put("hora",String.valueOf(Global.dateFormat.format(Global.date)));
+                visitada.put("hora",Global.dateFormat.format(Global.date));
                 visitada.put("ubicacion",Global.direccion);
                 visitada.put("semanaFiscal",Global.numSemana+"");
                 visitada.put("usuario",firebaseData.currentUserID);

@@ -37,6 +37,7 @@ import com.google.firebase.storage.UploadTask;
 import org.w3c.dom.Document;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -347,13 +348,17 @@ public class FirebaseData extends AppCompatActivity {
         return maqRegs;
 
     }
-    public ArrayList<HashMap<String,String>> get_maquinasRegistradasXsemana(int numSemana, String sucursal, ArrayList<HashMap<String,String>> maquinasRegistradas){
+    public ArrayList<HashMap<String,String>> get_maquinasRegistradasXsemana(int numSemana, String sucursal){
         String cveSuc = sucursal.charAt(0)+""+sucursal.charAt(1);
         ArrayList<HashMap<String,String>> maquinasXsemana = new ArrayList<>();
-        for (HashMap<String, String> maquina: maquinasRegistradas){
+        ArrayList<String> agregadas = new ArrayList<>();
+
+        for (HashMap<String, String> maquina: Global.maq_Registradas){
             String cveAux = maquina.get("alias").charAt(0)+""+maquina.get("alias").charAt(1);
-            if (cveAux.equals(cveSuc) && maquina.get("semanaFiscal").equals(numSemana+"") && maquina.get("usuario").equals(currentUserID)){
+            if (cveAux.equals(cveSuc) && maquina.get("semanaFiscal").equals(numSemana+"") && maquina.get("usuario").equals(currentUserID)
+                    && !agregadas.contains(maquina.get("alias"))){
                 maquinasXsemana.add(maquina);
+                agregadas.add(maquina.get("alias"));
             }
         }
 
@@ -471,19 +476,14 @@ public class FirebaseData extends AppCompatActivity {
         //Toast.makeText(context, "ID REGISTRO:  "+idRegistro, Toast.LENGTH_SHORT).show();
         return idRegistro;
     }
-    public String getSucPorRegistrar(){
-        return Global._dataSnapshot.child("usuarios").child(currentUserID).child("sucursales").getValue().toString();
-    }
-    public String getSucRegistradasByUser(){
-        String sucRegs = null;
-        try{
-            sucRegs = Global._dataSnapshot.child("usuarios").child(currentUserID).child("sucRegistradas").getValue().toString();
+    public List<String> getSucPorRegistrarByUser(String idUser){
 
-        }catch (Exception e){
-            this.updateSucRegistradas(currentUserID,"null");
-            Toast.makeText(context, "NO SE HAN REGISTRADO SUCURSALES ESTA SEMANA", Toast.LENGTH_SHORT).show();
-        }
-        return sucRegs;
+        return Arrays.asList(Global._dataSnapshot.child("usuarios").child(idUser).child("sucursales").getValue().toString().split(","));
+
+    }
+    public List<String> getSucRegistradasByUser(String idUser){
+        return Arrays.asList(Global._dataSnapshot.child("usuarios").child(idUser).child("sucRegistradas").getValue().toString().split(","));
+
     }
     public String getDepositoUsuario(String id){
         return Global._dataSnapshot.child("usuarios").child(id).child("porDepositar").getValue().toString();
@@ -510,7 +510,7 @@ public class FirebaseData extends AppCompatActivity {
     }
     public void put_registroContador(Map<String,String> registroContador){
         this.ref.child("maquinasRegistradas").push().setValue(registroContador);
-        /*db.collection("maquinasRegistradas")
+        db.collection("maquinasRegistradas")
                 .add(registroContador)
                 .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
                     @Override
@@ -524,7 +524,7 @@ public class FirebaseData extends AppCompatActivity {
                         Log.w("TAG Listo", "Error adding document", e);
                         Toast.makeText(context, "Error agregando maquina visitada.", Toast.LENGTH_SHORT).show();
                     }
-                });*/
+                });
     }
     public void put_tempRegistradas(String maqAlias){
         this.ref.child("temp_Registradas_"+currentUserID).child(maqAlias).setValue(maqAlias);
@@ -618,6 +618,7 @@ public class FirebaseData extends AppCompatActivity {
 
         ref.child("usuarios").child(id).child("porDepositar").setValue(porDep+"");
     }
+
     public void updateSucRegistradas(String id, String sucRegistradas){
         ref.child("usuarios").child(id).child("sucRegistradas").setValue(sucRegistradas);
     }
@@ -688,6 +689,26 @@ public class FirebaseData extends AppCompatActivity {
                 }
             }
         }
+    }
+    public void reiniciarSucursal(){
+        /*Toast.makeText(context, "NumSemana: "+Global.numSemana, Toast.LENGTH_SHORT).show();
+        Toast.makeText(context, "MAQUINAS A BORRAR:", Toast.LENGTH_SHORT).show();
+        for (String i: Global.maqsxsucursal){
+            Toast.makeText(context, i, Toast.LENGTH_SHORT).show();
+
+        }*/
+        DataSnapshot dataSnapshot = Global._dataSnapshot.child("maquinasRegistradas");
+        for (DataSnapshot ds: dataSnapshot.getChildren()){
+            if (ds.child("semanaFiscal").getValue().toString().equals(Global.numSemana+"")
+                && Global.maqsxsucursal.contains(ds.child("alias").getValue().toString())
+                && ds.child("usuario").getValue().toString().equals(currentUserID)){
+                Toast.makeText(context, "Borrar: \n"+ds.getKey()+"\n"+ds.child("alias").getValue().toString(), Toast.LENGTH_SHORT).show();
+                this.ref.child("maquinasRegistradas").child(ds.getKey()).removeValue();
+            }
+            // CHECAR PRIMERO LA SEMANA FISCAL, LUEGO EL ALIAS
+            // BORRAR POR DS.GETKEY
+        }
+
     }
 
     public void uploadImage(Uri photoURI, String ubicacionImagen){

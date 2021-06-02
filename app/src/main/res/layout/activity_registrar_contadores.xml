@@ -74,6 +74,8 @@
                         android:layout_height="30dp"
                         android:src="@drawable/camera" />
 
+
+
                 </LinearLayout>
 
                 <Button
@@ -88,6 +90,7 @@
 
 
             </LinearLayout>
+
             <TextView
                 android:id="@+id/datosAnteriores"
                 android:layout_width="match_parent"

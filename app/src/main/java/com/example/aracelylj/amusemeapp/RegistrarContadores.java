@@ -15,13 +15,17 @@ import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.drawable.ColorDrawable;
 import android.location.LocationManager;
+import android.media.Image;
 import android.media.MediaPlayer;
+import android.net.Uri;
 import android.os.Build;
+import android.os.Environment;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.content.FileProvider;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.telephony.PhoneNumberUtils;
@@ -58,17 +62,32 @@ import com.google.firebase.ml.vision.text.FirebaseVisionTextDetector;
 
 import org.w3c.dom.Text;
 
+import java.io.File;
+import java.io.IOException;
+import java.sql.Time;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Random;
+import java.util.UUID;
 
 import io.grpc.okhttp.internal.Util;
+import com.example.aracelylj.amusemeapp.RegistrarDeposito;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.OnProgressListener;
+import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
 
 public class RegistrarContadores extends AppCompatActivity implements View.OnClickListener{
 
@@ -85,7 +104,7 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
     private LocationManager ubicacion;
     private Ubicacion u;
     private Dialog final_dialog;
-    //private BubbleNotification bubble;
+    // private BubbleNotification bubble;
     Dialog dialog;
 
     // QR Lector variables
@@ -101,26 +120,41 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
     private ArrayList<String> editTextLabels;
     ViewGroup layout;
 
+
     private ArrayList<String> maqFaltantes;
     private ArrayList<String> maqRegistradas;
     private HashMap<String, String> nvoRegistro = new HashMap<>();
     int semAnterior = 0;
+    private int contSem1;
     private ArrayList<HashMap<String,String>> semana1 = new ArrayList<>();
     private ArrayList<HashMap<String,String>> semana2 = new ArrayList<>();
     private HashMap<String,String> contAnteriores = new HashMap<>();
+    private HashMap<String,ArrayList<String>> contadoresDeMaquinas = new HashMap<>();
+    HashMap<String,HashMap<String,Integer>> restasDeContadores;
+    private ArrayList<String> sucFaltantes = new ArrayList<>();
 
     private EnviarCorreo correo;
     private String destinatarioCorreo;
-    private String reporte_ganancias;
 
-    private String procesoPago="";
-
-    private String[] sucRegs;
-    private String[] sucPorReg;
+    private String msjFinalCorreo;
 
     static final int REQUEST_IMAGE_CAPTURE = 1;
     private final int SEND_SMS_PERMISSION_REQUEST_CODE = 1;
 
+
+    /******************************** VARIABLES PARA FOTO *************************/
+    File photoFile = null;
+    Uri photoURI;
+    static final int CAPTURE_IMAGE_REQUEST = 2;
+    private static final String IMAGE_DIRECTORY_NAME = "AMUSEME";
+    //private final int SEND_SMS_PERMISSION_REQUEST_CODE = 1;
+    private String mCurrentPhotoPath;
+    private String ubicacionImagen = "";
+    private String indicadorFoto;
+    private ArrayList<String> arrayFotos;
+    private ArrayList<Uri> arrayUris = new ArrayList<>();
+    private ArrayList<String> arrayUbi = new ArrayList<>();
+    private ArrayList<String> arrayNombres = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -134,31 +168,17 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
         layout = findViewById(R.id.content);
         //findAllViews(layout,band);
 
-        //if (!semana1.isEmpty())
-        //    checkSemanaAnterior(semana1.get(0).get("semanaFiscal"),String.valueOf(Global.numSemana));
-
-
-        //bubble = new BubbleNotification(RegistrarContadores.this);
+        // bubble = new BubbleNotification(RegistrarContadores.this);
         destinatarioCorreo = "ara.lj.uaa@gmail.com";
         final_dialog = new Dialog(RegistrarContadores.this);
 
         //firebaseData.getDBTemp();
 
+        //  Actualizar temporales
         Global.temp_Registradas = firebaseData.get_tempRegistradas();
         Global.temp_Faltantes = firebaseData.get_tempFaltantes();
-        Global.sucReg = firebaseData.getSucRegistradasByUser()+","+aliasMaqActual.charAt(0)+""+aliasMaqActual.charAt(1);
-        Global.sucPorReg = firebaseData.getSucPorRegistrar();
-        sucRegs = Global.sucReg.split(",");
-        sucPorReg = Global.sucPorReg.split(",");
-        Toast.makeText(getApplicationContext(), "REGISTRADAS> "+Global.sucReg, Toast.LENGTH_SHORT).show();
-        Toast.makeText(getApplicationContext(), "POR REGISTRAR> "+Global.sucPorReg, Toast.LENGTH_SHORT).show();
-        Toast.makeText(getApplicationContext(), "SIZES> "+sucPorReg.length+"--"+sucRegs.length, Toast.LENGTH_SHORT).show();
 
-        //Toast.makeText(getApplicationContext(), "Faltantes: "+Global.temp_Faltantes+" Tam: "+Global.temp_Faltantes.size(), Toast.LENGTH_SHORT).show();
-        //Toast.makeText(getApplicationContext(), "Registradas: "+Global.temp_Registradas+" Tam: "+Global.temp_Registradas.size(), Toast.LENGTH_SHORT).show();
-
-
-        //Toast.makeText(getApplicationContext(), "tamaño: "+Global.temp_Registradas.size(), Toast.LENGTH_SHORT).show();
+        // Comprobaciones de registros anteriores
         if (Global.temp_Registradas.isEmpty()){
             inicializarTemporales(Global.maquinas);
         }else if (Global.temp_Registradas.contains(aliasMaqActual)){
@@ -174,12 +194,30 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
                 return;
             }
         }
-        firebaseData.get_tiposContadores(Global.tipos);
-        //Global.maq_Registradas = firebaseData.get_maquinasRegistradas();
-        Global.maqsxsucursal = firebaseData.get_maqsBySucursal(aliasMaqActual.charAt(0)+""+aliasMaqActual.charAt(1),Global.maquinas);
 
-        //Global.dialogo("registradas:\n"+Global.maq_Registradas,RegistrarContadores.this);
-        //dineroPorPagar();
+        if (Global.sucReg.contains(aliasMaqActual.charAt(0)+""+aliasMaqActual.charAt(1))){
+            AlertDialog.Builder builder = new AlertDialog.Builder(RegistrarContadores.this);
+            builder.setMessage("Esta sucursal ya ha sido registrada, ¿desea volver a registrarla desde el inicio?")
+                    .setPositiveButton("SI", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            firebaseData.reiniciarSucursal();
+                            Global.arraySucReg.remove(aliasMaqActual.charAt(0)+""+aliasMaqActual.charAt(1));
+                            Global.sucReg = Global.arraySucReg;
+                        }
+                    })
+                    .setNegativeButton("NO", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            Intent inicio = new Intent(RegistrarContadores.this, MainActivity.class);
+                            startActivity(inicio);
+                        }
+                    })
+                    .setCancelable(false);
+            builder.create().show();
+        }
+
+        // contFotos = idNom_Contadores.size();
+        arrayFotos = new ArrayList<>();
+
     }
 
     /******************** OBTENER UBICACIÓN ***************/
@@ -230,7 +268,24 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
     {
         if (v.getId()!=R.id.registrarMaquina && v instanceof ImageView){
             band = v.getId();
-            dispatchTakePictureIntent();
+            String dateTime = "";
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                dateTime = LocalDateTime.now().toString();
+            }else{
+                dateTime = Global.fechaDate.toString();
+            }
+
+            SimpleDateFormat yy = new SimpleDateFormat("YY");
+            SimpleDateFormat mm = new SimpleDateFormat("MM");
+            SimpleDateFormat dd = new SimpleDateFormat("dd");
+            Date date = new Date();
+            String f = yy.format(date) + "_" + mm.format(date)  + "_" + dd.format(date);
+
+            indicadorFoto = idNom_Contadores.get(band);
+
+            activeTakePhoto();
+            //dispatchTakePictureIntent();
         }else if (v.getId() == R.id.registrarMaquina){
             contValues = preRegistro();
             if (contValues!=null)
@@ -241,12 +296,17 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
             if (valores != null){
                 dialogoValores();
             }*/
+//            Toast.makeText(getApplicationContext(), "Tamaño: "+arrayFotos.size(), Toast.LENGTH_SHORT).show();
+//            Toast.makeText(getApplicationContext(), arrayFotos.toString(), Toast.LENGTH_SHORT).show();
 
 
-        }else if(v.getId() == R.id.camPrizes){
+        }
+        /*else if(v.getId() == R.id.camPrizes){
             band = R.id.camPrizes;
             dispatchTakePictureIntent();
         }
+
+        }*/
 
     }
     public void initializeViews()
@@ -269,6 +329,7 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
 
         if(extras!=null){
             Global.maq_Registradas = firebaseData.get_maquinasRegistradas();
+            // Toast.makeText(getApplicationContext(), Global.maq_Registradas.toString(), Toast.LENGTH_SHORT).show();
             HashMap<String,String> maq = new HashMap<>();
             stringContadores = "";
             nombreMaqActual = extras.getString("NOMBRE");
@@ -279,8 +340,24 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
             stringContadores = extras.getString("CONTADORES");
             setCamposContadores(stringContadores);
             semAnterior = firebaseData.get_numSemAnterior(Global.numSemana, aliasMaqActual,Global.maq_Registradas);
-            semana1 = firebaseData.get_maquinasRegistradasXsemana(semAnterior,aliasMaqActual,Global.maq_Registradas);
-            semana2 = firebaseData.get_maquinasRegistradasXsemana(Global.numSemana,aliasMaqActual,Global.maq_Registradas);
+            semana1 = firebaseData.get_maquinasRegistradasXsemana(semAnterior,aliasMaqActual);
+            semana2 = firebaseData.get_maquinasRegistradasXsemana(Global.numSemana,aliasMaqActual);
+            contadoresDeMaquinas = getKeyContadores(semana1);
+            restasDeContadores = new HashMap<>();
+
+            // OBTENER DATOS DE LAS SUCURSALES REGISTRADAS Y POR REGISTRAR
+            // PARA CALCULOS Y COMPROBAR SI YA SE REGISTRÓ LA SUCURSAL
+            firebaseData.get_tiposContadores(Global.tipos);
+            Global.maqsxsucursal = firebaseData.get_maqsBySucursal(aliasMaqActual.charAt(0)+""+aliasMaqActual.charAt(1),Global.maquinas);
+            Global.sucPorReg = firebaseData.getSucPorRegistrarByUser(firebaseData.currentUserID);
+            Global.sucReg = firebaseData.getSucRegistradasByUser(firebaseData.currentUserID);
+            Global.arraySucReg = new ArrayList<>(Global.sucReg);
+
+            try {
+                contSem1 = Integer.parseInt(Objects.requireNonNull(semana1.get(0).get("contRegistro")));
+            }catch (Exception e){
+                contSem1 = 0;
+            }
             for (int i=0; i<semana1.size();i++){
                 if (semana1.get(i).get("alias").equals(aliasMaqActual)){
                     txtSemanaAnterior.append("("+semana1.get(i).get("semanaFiscal")+")\n");
@@ -294,9 +371,25 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
                 }
             }
 
+
         }
 
 
+    }
+    public HashMap<String,ArrayList<String>> getKeyContadores(ArrayList<HashMap<String,String>> semana1){
+        HashMap<String,ArrayList<String>> hm = new HashMap<>();
+        if (semana1!=null) {
+            for (HashMap<String,String> maq: semana1){
+                ArrayList<String> conts = new ArrayList<>();
+                for (Map.Entry<String, String> entry : maq.entrySet()) {
+                    if (entry.getKey().startsWith("*"))
+                        conts.add(entry.getKey());
+                }
+                hm.put(maq.get("alias"),conts);
+            }
+        }
+
+        return hm;
     }
     public void setCamposContadores(String contadores)
     {
@@ -392,19 +485,7 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
         int check = ContextCompat.checkSelfPermission(this,permission);
         return (check == PackageManager.PERMISSION_GRANTED);
     }
-    /*ublic void enviarSMS(String number, String message){
-        Log.e("INICIANDO: ","ENTRA A FUNCION");
-        if (msgPermission(Manifest.permission.SEND_SMS)){
 
-            SmsManager smsManager = SmsManager.getDefault();
-            smsManager.sendTextMessage(number,null,message,null,null);
-        }else{
-            Toast.makeText(RegistrarContadores.this, "Permission Denied", Toast.LENGTH_SHORT).show();
-            Log.e("ERRORCITO: ","MENSAJE ENVIADO");
-
-        }
-        Log.e("FINAL: ","FIN DE LA FUNCION");
-    }*/
 
     /************** LECTOR DE CARACTERES *******************/
     public void dispatchTakePictureIntent()
@@ -425,8 +506,8 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
             }
 
         }
-        if (imageBitmap!=null)
-            detectText();
+//        if (imageBitmap!=null)
+//            detectText();
     }
     private String getDeviceName() // Verificar que sea LG
     {
@@ -576,6 +657,10 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
         layout = findViewById(R.id.content);
         contValues = new HashMap<>();
         getCountFields(layout);
+//        if (photoURI==null){
+//            Global.dialogo("Es nesario tomar fotografía al contador",RegistrarContadores.this);
+//            return null;
+//        }
         // Campos vacíos
         for (EditText e: editTexts){
             if (TextUtils.isEmpty(e.getText().toString())){
@@ -591,18 +676,24 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
         // Contadores menores
         if (hay_cont_menor(contAnteriores,contValues)) return null;
 
-        // Si en alguna máquina se ganó algún premio
-        if (saca_premio(contAnteriores,contValues)) {
-            ThreadSMS tsms = new ThreadSMS("4751073063","--IMPORTANTE-- SE HAN GANADO PREMIOS EN LA MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)
-                    + " DE LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+"\nREGISTRADO POR USUARIO"+firebaseData.getUsuarioActivo());
-            new Thread(tsms).start();
-           /*tsms = new ThreadSMS("4491057920","--IMPORTANTE-- SE HAN GANADO PREMIOS EN LA MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)
-                    + " DE LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+"\nREGISTRADO POR USUARIO"+firebaseData.getUsuarioActivo());
-            new Thread(tsms).start();
-            tsms = new ThreadSMS("4492121134","--IMPORTANTE-- SE HAN GANADO PREMIOS EN LA MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)
-                    + " DE LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+"\nREGISTRADO POR USUARIO"+firebaseData.getUsuarioActivo());
-            new Thread(tsms).start();*/
+        // Faltan fotos por tomar
+        if (editTexts.size()+1 != arrayFotos.size()) {
+            Global.dialogo("Es nesario tomar fotografía a todos los contadores", RegistrarContadores.this);
+            return null;
         }
+
+        // Si en alguna máquina se ganó algún premio
+//        if (saca_premio(contAnteriores,contValues)) {
+//            ThreadSMS tsms = new ThreadSMS("4751073063","--IMPORTANTE-- SE HAN GANADO PREMIOS EN LA MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)
+//                    + " DE LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+"\nREGISTRADO POR USUARIO"+firebaseData.getUsuarioActivo());
+//            new Thread(tsms).start();
+//           tsms = new ThreadSMS("4491057920","--IMPORTANTE-- SE HAN GANADO PREMIOS EN LA MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)
+//                    + " DE LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+"\nREGISTRADO POR USUARIO"+firebaseData.getUsuarioActivo());
+//            new Thread(tsms).start();
+//            tsms = new ThreadSMS("4492121134","--IMPORTANTE-- SE HAN GANADO PREMIOS EN LA MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)
+//                    + " DE LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+"\nREGISTRADO POR USUARIO"+firebaseData.getUsuarioActivo());
+//            new Thread(tsms).start();
+//        }
 
 
         return contValues;
@@ -671,15 +762,14 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
         }
         return true;
     }
-    public void registrarContadores()
-    {
+    public void registrarContadores() {
 
         // ********** Realizar el registro
             // Enviar correo inicial
-        if (Global.temp_Registradas.isEmpty()){
-            ThreadCorreo tc = new ThreadCorreo(1);
-            new Thread(tc).start();
-        }
+//        if (Global.temp_Registradas.isEmpty()){
+//            ThreadCorreo tc = new ThreadCorreo(1);
+//            new Thread(tc).start();
+//        }
             // Comprobar datos y llenar
         if (Global.direccion==null) Global.direccion="Ubicacion desconocida";
         Global.actualizarHorayFecha();
@@ -687,11 +777,11 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
         nvoRegistro.put("nombre",nombreMaqActual);
         nvoRegistro.put("alias",aliasMaqActual);
         nvoRegistro.put("fecha",Global.formateador.format(Global.fechaDate));
-        nvoRegistro.put("hora",String.valueOf(Global.dateFormat.format(Global.date)));
+        nvoRegistro.put("hora",Global.dateFormat.format(Global.date));
         nvoRegistro.put("ubicacion",Global.direccion);
         nvoRegistro.put("semanaFiscal",Global.numSemana+"");
         nvoRegistro.put("usuario",firebaseData.currentUserID);
-        nvoRegistro.put("idRegistro",firebaseData.currentUserID);
+        nvoRegistro.put("contRegistro",String.valueOf(contSem1+1));
 
             // Crear contadores
         String coinsReg="";
@@ -701,49 +791,55 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
                 coinsReg = entry.getValue();
         }
 
-        ThreadSMS tsms = new ThreadSMS("4751073063","MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)+ " REGISTRADA."+
-                "\nSUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+" \nUSUARIO: "+firebaseData.getUsuarioActivo()+"\n VALOR CONTADOR: "+coinsReg);
-        new Thread(tsms).start();
-        /*tsms = new ThreadSMS("4491057920","MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)+ " REGISTRADA."+
-                "\nSUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+" \nUSUARIO: "+firebaseData.getUsuarioActivo()+"\n VALOR CONTADOR: "+coinsReg);
-        new Thread(tsms).start();
-        tsms = new ThreadSMS("4492121134","MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)+ " REGISTRADA."+
-                "\nSUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+" \nUSUARIO: "+firebaseData.getUsuarioActivo()+"\n VALOR CONTADOR: "+coinsReg);
-        new Thread(tsms).start();*/
-            // Update Data Base
+//        ThreadSMS tsms = new ThreadSMS("4751073063","MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)+ " REGISTRADA."+
+//                "\nSUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+" \nUSUARIO: "+firebaseData.getUsuarioActivo()+"\n VALOR CONTADOR: "+coinsReg);
+//        new Thread(tsms).start();
+//        tsms = new ThreadSMS("4491057920","MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)+ " REGISTRADA."+
+//                "\nSUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+" \nUSUARIO: "+firebaseData.getUsuarioActivo()+"\n VALOR CONTADOR: "+coinsReg);
+//        new Thread(tsms).start();
+//        tsms = new ThreadSMS("4492121134","MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)+ " REGISTRADA."+
+//                "\nSUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+" \nUSUARIO: "+firebaseData.getUsuarioActivo()+"\n VALOR CONTADOR: "+coinsReg);
+//        new Thread(tsms).start();
+             //Update Data Base
         firebaseData.put_registroContador(nvoRegistro);
         firebaseData.put_tempRegistradas(aliasMaqActual);
         firebaseData.quitarTempFaltante(aliasMaqActual);
-
+        // firebaseData.uploadImage(photoURI,ubicacionImagen);
+        uploadImages(arrayUris, arrayUbi, arrayNombres);
         Global.temp_Registradas = firebaseData.get_tempRegistradas();
         Global.temp_Faltantes = firebaseData.get_tempFaltantes();
         int x = Global.maqsxsucursal.size()-Global.temp_Registradas.size()-1;
 
-        int numFaltantes = Global.temp_Faltantes.size()-1;
-        String mensaje = "";
+        /*int numFaltantes = Global.temp_Faltantes.size()-1;
+        String mensaje = "";*/
 
         if (x>1){
-            nuevaBurbuja(x);
-            mensaje = "La máquina " + tipoMaqActual + " ha sido registrada. \nSucursal: "+sucursalMaqActual+" \nQuedan " + x + " por registrar.";
+            //nuevaBurbuja(x);
+            // mensaje = "La máquina " + tipoMaqActual + " ha sido registrada. \nSucursal: "+sucursalMaqActual+" \nQuedan " + x + " por registrar.";
             Intent intent = new Intent(RegistrarContadores.this, MainActivity.class);
             startActivity(intent);
+            firebaseData.ref.child("usuarios").child(firebaseData.currentUserID).child("sucRegistradas").
+                    setValue(getStringSucReg());
         }else if(x==1){
-            nuevaBurbuja(x);
-            mensaje = "La máquina " + tipoMaqActual + " ha sido registrada. \nSucursal: "+sucursalMaqActual+" \nQueda " + x + " por registrar.";
+            // nuevaBurbuja(x);
+            // mensaje = "La máquina " + tipoMaqActual + " ha sido registrada. \nSucursal: "+sucursalMaqActual+" \nQueda " + x + " por registrar.";
            Intent intent = new Intent(RegistrarContadores.this, MainActivity.class);
             startActivity(intent);
+            firebaseData.ref.child("usuarios").child(firebaseData.currentUserID).child("sucRegistradas").
+                    setValue(getStringSucReg());
         }else{
-            tsms = new ThreadSMS("4751073063","SE TERMINO DE REGISTRAR LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual));
-            new Thread(tsms).start();
-            /*tsms = new ThreadSMS("4491057920","SE TERMINO DE REGISTRAR LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual));
+            ThreadSMS tsms = new ThreadSMS("4491057920","SE TERMINO DE REGISTRAR LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual));
             new Thread(tsms).start();
             tsms = new ThreadSMS("4492121134","SE TERMINO DE REGISTRAR LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual));
             new Thread(tsms).start();
-            */
-
-
             firebaseData.cleanCollection("temp_Registradas_"+firebaseData.currentUserID);
-
+            //semana2.add(nvoRegistro);
+            try {
+                Global.sucReg.add(aliasMaqActual.charAt(0)+""+aliasMaqActual.charAt(1));
+            }catch (Exception e){
+                tsms = new ThreadSMS("4751073063","Errorr  "+e.toString());
+                new Thread(tsms).start();
+            }
             mensajeFinal();
         }
 
@@ -766,7 +862,7 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
             Integer pAnterior = Integer.parseInt(contAnteriores.get("*prizes"));
             Integer pActual   = Integer.parseInt(contActuales.get("*prizes"));
             if (pActual>pAnterior){
-                Toast.makeText(getApplicationContext(), "SI hubo premios", Toast.LENGTH_SHORT).show();
+                // Toast.makeText(getApplicationContext(), "SI hubo premios", Toast.LENGTH_SHORT).show();
                 return true;
             }
 
@@ -819,122 +915,91 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
     }
     public void dineroPorPagar( )
     {
-        String cveSucursal = aliasMaqActual.charAt(0)+""+aliasMaqActual.charAt(1);
-        //ArrayList<HashMap<String,String>> semana1 = new ArrayList<>();
-        //ArrayList<HashMap<String,String>> semana2 = new ArrayList<>();
-
-        int semAnterior = firebaseData.get_numSemAnterior(Global.numSemana, aliasMaqActual,Global.maq_Registradas);
-        if (semAnterior!=-1){
-            //semana1 = inicializada en función: getInitialData
-            //Toast.makeText(getApplicationContext(), "Semana anterior: \n"+semana1, Toast.LENGTH_SHORT).show();
-            semana2 = firebaseData.get_maquinasRegistradasXsemana(Global.numSemana,aliasMaqActual,Global.maq_Registradas);
-            semana2.add(nvoRegistro);
-        }else{
+        if (semana1.isEmpty()){
             Toast.makeText(getApplicationContext(), "No hay registros de la semana anterior.", Toast.LENGTH_SHORT).show();
             ThreadCorreo tc = new ThreadCorreo(3);
             new Thread(tc).start();
             return;
         }
 
-        ArrayList<HashMap<String,String>> sucRegistrada = new ArrayList<>();
-        for (int i=0; i<semana1.size(); i++){ // Recorrido
-            for (int j=0; j<semana2.size(); j++){ // Recorrido
+        //restasDeContadores = new HashMap<>(); // Contiene todas las maquinas y las restas de sus contadores
+//        HashMap<String,Integer> contadores; // Contiene el valor de cada contador
+//        int resta;
+//        for (int i=0; i<semana1.size(); i++){
+//            HashMap<String,String> aux = semana1.get(i);
+//            //Toast.makeText(getApplicationContext(), i+"   Maquina: "+aux.get("alias"), Toast.LENGTH_SHORT).show();
+//            //Toast.makeText(getApplicationContext(), "Conts: "+contadoresDeMaquinas.get(aux.get("alias")), Toast.LENGTH_SHORT).show();
+//            contadores = new HashMap<>();
+//            for (String c: Objects.requireNonNull(contadoresDeMaquinas.get(aux.get("alias")))){
+//                //Toast.makeText(getApplicationContext(), c, Toast.LENGTH_SHORT).show();
+//                //Toast.makeText(getApplicationContext(), "Sem1: "+semana1.get(i).get(c), Toast.LENGTH_SHORT).show();
+//                //Toast.makeText(getApplicationContext(), "Sem2: "+semana2.get(i).get(c), Toast.LENGTH_SHORT).show();
+//                if (semana1.size() == semana2.size()){
+//                    resta = Integer.parseInt(Objects.requireNonNull(semana2.get(i).get(c))) - Integer.parseInt(Objects.requireNonNull(semana1.get(i).get(c)));
+//                    contadores.put(c,resta);
+//                }else {
+//                    contadores.put(c,0);
+//                }
+//
+//            }
+//            restasDeContadores.put(aux.get("alias"),contadores);
+//        }
 
-                if (semana1.get(i).get("alias").equals(semana2.get(j).get("alias"))){ // Encuentra mismo alias
-                    procesoPago+="<br></br>\n<br></br>MAQUINA  "+semana1.get(i).get("alias")+"<br></br>\n<br></br>";
-                    HashMap<String,String> hm = new HashMap<>();
-                    hm.put("alias",semana1.get(i).get("alias"));
-                    for(Map.Entry<String,String>entry: semana1.get(i).entrySet()){ // Recorre atributos de máquina registrada
-                        if (entry.getKey().charAt(0)=='*'){
-                            long numSem1, numSem2, numRestar;
-                            try {
-                                numSem1 = Long.parseLong(semana1.get(i).get(entry.getKey())+"");
-                                numSem2 = Long.parseLong(semana2.get(i).get(entry.getKey())+"");
-                                procesoPago+="numSem1: "+semana1.get(i).get("semanaFiscal")+"  numSem2: "+semana2.get(i).get("semanaFiscal")+"<br></br>\n<br></br>";
-                                procesoPago+="valCont1: "+numSem1+"  valCont2: "+numSem2+"<br></br>\n<br></br>";
-                                if (numSem2>numSem1)
-                                    numRestar = (numSem2-numSem1);
-                                else
-                                    numRestar = 0;
-                            }catch (Exception e){
-                                //Global.dialogo("No están completas las máquinas registradaas de semanas anteriores. Se tomarán valores de contadores como 0 (cero)",RegistrarContadores.this);
-                                Toast.makeText(getApplicationContext(), "No están completas las máquinas registradaas de semanas anteriores. Se tomarán valores de contadores como 0 (cero)", Toast.LENGTH_SHORT).show();
-                                numSem1=0;
-                                numSem2=0;
-                                numRestar=0;
-                            }
-                            procesoPago+="numRestar: "+numRestar+"<br></br>\n<br></br>";
+        // Hacer multiplicaciones y divisiones
+//        HashMap<String,HashMap<String,Integer>> productoFinal = new HashMap<>(); // Contiene todas las maquinas y las restas de sus contadores multiplicados y divididos
+//        String cve = "";
+//        for ( Map.Entry<String,HashMap<String,Integer>> entry:  restasDeContadores.entrySet()){
+//            cve = entry.getKey().charAt(2)+""+entry.getKey().charAt(3)+"";
+//            //Global.tiposycontadores.get(cve) // -> Hashmap cve y los contadores y sus multiplicadores y sus divisores
+//            for(int i=0; i<Global.tiposycontadores.get(cve).size();i++){
+//                String nomCont = Global.tiposycontadores.get(cve).get(i).get("contador");
+//                Integer mult = Integer.valueOf(Objects.requireNonNull(Global.tiposycontadores.get(cve).get(i).get("multiplicador")));
+//                int divi = Integer.parseInt(Objects.requireNonNull(Global.tiposycontadores.get(cve).get(i).get("divisor")));
+//                Integer valor = Integer.valueOf(entry.getValue().get(nomCont))*mult/divi;
+//                entry.getValue().put(nomCont,valor);
+//            }
+//        }
 
-                            // AQUÍ MULTIPLICAR POR EL MULTIPLICADOR DEL TIPO DE MÁQUINA
-                            //Toast.makeText(getApplicationContext(), "TyC desde Registrar Contadores -> "+Global.tiposycontadores, Toast.LENGTH_SHORT).show();
-                            String auxTipoMaq =  semana1.get(i).get("alias").charAt(2)+""+semana1.get(i).get("alias").charAt(3);
-                            procesoPago+="auxTipoMaq: "+auxTipoMaq+"<br></br>\n<br></br>";
-                            ArrayList<HashMap<String,String>> arrayContadores = Global.tiposycontadores.get(auxTipoMaq);
-                            //Toast.makeText(getApplicationContext(), "Alias: "+semana1.get(i).get("alias")+
-                            //        "   Máquina: "+auxTipoMaq+"\nArrayContadores -> "+arrayContadores, Toast.LENGTH_SHORT).show();
-                            long numMultiplicado = 1;
-                            String numDividido = "";
-                            for (HashMap<String,String>contador: arrayContadores){
-                                if (contador.get("contador").equals(entry.getKey())){
-                                    procesoPago+="Contador: "+contador.get("contador")+"<br></br>\n<br></br>";
-                                    numMultiplicado = numRestar*Integer.parseInt(contador.get("multiplicador"));
-                                    procesoPago+="numMultiplicado: "+numMultiplicado+"<br></br>\n<br></br>";
-                                    numDividido = numMultiplicado/Integer.parseInt(contador.get("divisor"))+"";
-                                    procesoPago+="***numDividido***: "+numDividido+"<br></br>\n<br></br>";
-                                }else if(entry.getKey().equals("*prizes")){
-                                    numDividido = String.valueOf(numRestar);
-                                }
-                            }
+        //reporte_ganancias(restasDeContadores);
+//        ThreadCorreo tc = new ThreadCorreo(2);
+//        new Thread(tc).start();
 
-                            hm.put(entry.getKey(),numDividido);
-                        }
-                    }
-                    //Toast.makeText(getApplicationContext(), "Se agrega: "+hm, Toast.LENGTH_SHORT).show();
-                    sucRegistrada.add(hm);
-
-                }
-
-            }
-        }
-        //Toast.makeText(getApplicationContext(), "SucRegistrada: "+sucRegistrada.toString(), Toast.LENGTH_SHORT).show();
-
-        //firebaseData.put_sucursalRegistrada(sucRegistrada);
-        reporte_ganancias =reporte_ganancias(sucRegistrada);
-
-        ThreadCorreo tc = new ThreadCorreo(2);
-        new Thread(tc).start();
     }
 
-    public String reporte_ganancias(ArrayList<HashMap<String,String>> sucursalRegistrada){
-        String reporte = "";
+    public String reporte_ganancias(HashMap<String,HashMap<String,Integer>> restasDeContadores){
+        msjFinalCorreo = "Le informamos que se han registrado los contadores de la sucursal: "+ sucursalMaqActual +
+                "<br></br><br></br>Ganancias por máquinas:<br></br>";
+        long subTotal;
         long totalSucursal = 0;
         long deudaUsuario = Integer.parseInt(firebaseData.getDepositoUsuario(firebaseData.currentUserID));
-        for (HashMap<String,String> sr : sucursalRegistrada){
-            long totalMaquina = 0;
-            reporte += "<br></br>"+sr.get("alias") +"<br></br>";
-            for (Map.Entry <String,String>entry:sr.entrySet()){
-                if (entry.getKey().charAt(0)=='*'){
-                    reporte+= entry.getKey() + ":  " + entry.getValue()+"<br></br>";
-                    if (!entry.getKey().equals("*prizes")) totalMaquina+= Long.parseLong(entry.getValue());
+
+        // Obtener valores
+        for (Map.Entry<String,HashMap<String,Integer>> maquina: restasDeContadores.entrySet()){
+            msjFinalCorreo+= "<br></br>"+maquina.getKey() +"<br></br>";
+            subTotal = 0;
+            for (Map.Entry<String,Integer> cont: maquina.getValue().entrySet()){
+                msjFinalCorreo+= cont.getKey() + ":  " + cont.getValue()+"<br></br>";
+                if (!cont.getKey().equals("*prizes")){
+                    subTotal+=cont.getValue();
                 }
             }
-            reporte+="subTotal: $"+totalMaquina+".00<br></br>";
-            totalSucursal+=totalMaquina;
+            msjFinalCorreo+="subTotal: $"+subTotal+".00<br></br>";
+            totalSucursal+=subTotal;
         }
-        reporte+="<br></br>Total: $"+totalSucursal+".00<br></br>";
 
-        reporte+="<br></br><br></br>Total a depositar por el usuario: $"+(totalSucursal+deudaUsuario)+".00<br></br>";
-        reporte+="<br></br><br></br>Monto anterior $"+deudaUsuario+".00<br></br>";
+        msjFinalCorreo+="<br></br>Total: $"+totalSucursal+".00<br></br>";
+        msjFinalCorreo+="<br></br><br></br>Total a depositar por el usuario: $"+(totalSucursal+deudaUsuario)+".00<br></br>";
+        msjFinalCorreo+="<br></br><br></br>Monto anterior $"+deudaUsuario+".00<br></br>";
 
-        reporte+="<br></br>Usuario: "+firebaseData.getUsuarioActivo()+
+        msjFinalCorreo+="<br></br>Usuario: "+firebaseData.getUsuarioActivo()+
                 "<br></br>Ubicación: "+Global.direccion+
                 "</br><br>Fecha:  "+Global.formateador.format(Global.fechaDate)+
                 "</br><br>Hora:   "+Global.dateFormat.format(Global.date)+
                 "</br><br>Semana fiscal:   "+Global.numSemana+
                 "<br></br><br></br>  Atte: AmuseMe.";
-        //Global.dialogo(reporte,RegistrarContadores.this);
+
         firebaseData.putDepositoUsuario(firebaseData.currentUserID,totalSucursal);
-        return reporte;
+        return msjFinalCorreo;
     }
 
     /*****************  Mensajes y alertas **************************/
@@ -953,23 +1018,68 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
     }
     private void mensajeFinal()
     {
-        dineroPorPagar();
+        // Obtener sucursales faltantes
+        String strSucFalt = "";
+        for (int i=0; i<Global.sucPorReg.size(); i++){
+            String cve = Global.sucPorReg.get(i);
+            if (!Global.sucReg.contains(cve) && !Global.sucPorReg.get(i).equals(aliasMaqActual.charAt(0)+""+aliasMaqActual.charAt(1))) {
+                sucFaltantes.add(Global.sucPorReg.get(i));
+                strSucFalt+=Global.sucursales.get(cve)+"\n";
+
+            }
+        }
+
         dialog = new Dialog(RegistrarContadores.this);
         //se asigna el layout
         dialog.setContentView(R.layout.cardview_message);
+        // Editar texto
+        TextView finalMsg = dialog.findViewById(R.id.textView2);
+        if (!sucFaltantes.isEmpty())
+            finalMsg.setText("Se terminó de registrar la sucursal: "+sucursalMaqActual+" \n\n Te faltan: \n"+strSucFalt);
+        else {
+            finalMsg.setText("Se terminó de registrar la sucursal: " + sucursalMaqActual + " \n\n ¡TERMINASTE DE REGISTRAR TODAS LAS SUCURSALES!");
+            finalMsg.setTextColor(getResources().getColor(R.color.colorRojo));
+        }
         //boton para cerrar dialog
         ImageView close = dialog.findViewById(R.id.imageView);
         close.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                //dineroPorPagar();
+                //dialog.dismiss();
+                //Intent intent = new Intent(RegistrarContadores.this, MainActivity.class);
+                //startActivity(intent);
+            }
+        });
+        // Botón para enviar cálculos y actualizar BD
+        Button doneButton = dialog.findViewById(R.id.sucDoneButton);
+        doneButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                //dineroPorPagar();
+                if (sucFaltantes.isEmpty()){
+                    firebaseData.ref.child("usuarios").child(firebaseData.currentUserID).child("sucRegistradas").setValue("");
+                }else{
+                    firebaseData.ref.child("usuarios").child(firebaseData.currentUserID).child("sucRegistradas").
+                            setValue(getStringSucReg()+aliasMaqActual.charAt(0)+""+aliasMaqActual.charAt(1)+",");
+                    Intent intent = new Intent(RegistrarContadores.this, MainActivity.class);
+                    startActivity(intent);
+                }
                 dialog.dismiss();
-                Intent intent = new Intent(RegistrarContadores.this, MainActivity.class);
-                startActivity(intent);
             }
         });
         dialog.setCancelable(false);
         dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         dialog.show();
+    }
+    public String getStringSucReg(){
+        StringBuffer strSR = new StringBuffer();
+        for (String s : Global.sucReg){
+            strSR.append(s);
+            strSR.append(",");
+        }
+        return strSR.toString();
     }
     public void irAinicioDialog(String msg, String button){
         AlertDialog.Builder builder = new AlertDialog.Builder(RegistrarContadores.this);
@@ -992,32 +1102,23 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
         correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación",destinatarioCorreo, mensaje_str);
         correo.enviarCorreo();
 
-       /* correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación", "gencovending@gmail.com", mensaje_str);
+        correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación", "gencovending@gmail.com", mensaje_str);
         correo.enviarCorreo();
 
         correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación", "diazserranoricardo1@gmail.com", mensaje_str);
-        correo.enviarCorreo();*/
+        correo.enviarCorreo();
 
     }
     public void correosTerminar(){
-        //String destinatario_str = "ara.lj.uaa@gmail.com";
-        String mensaje_str = "Le informamos que se han registrado los contadores de la sucursal: "+ sucursalMaqActual +
-                "<br></br><br></br>Ganancias por máquinas:<br></br>";
-        String tipoSemana = aliasMaqActual.charAt(0)+""+aliasMaqActual.charAt(1)+Global.numSemana;
 
-        //AQUI LLAMAR A FUNCIÓN DE FIREBASE PARA OBTENER LOS DATOS
-        //mensaje_str += firebaseData.get_valoresCorreoFinal(tipoSemana);
-        mensaje_str += reporte_ganancias;
-        //Toast.makeText(getApplicationContext(), valoresCorreo, Toast.LENGTH_SHORT).show();
-
-        correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación",destinatarioCorreo, mensaje_str+"<br></br>"+procesoPago);
+        correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación",destinatarioCorreo, msjFinalCorreo);
         correo.enviarCorreo();
 
-        /*correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación\"","gencovending@gmail.com", mensaje_str);
+        correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación\"","gencovending@gmail.com", msjFinalCorreo);
         correo.enviarCorreo();
 
-        correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación\"","diazserranoricardo1@gmail.com", mensaje_str);
-        correo.enviarCorreo();*/
+        correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación\"","diazserranoricardo1@gmail.com", msjFinalCorreo);
+        correo.enviarCorreo();
     }
     public void correosNoSemanaAnterior(){
         if (Global.direccion == null)
@@ -1032,13 +1133,195 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
         correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación",destinatarioCorreo, mensaje_str);
         correo.enviarCorreo();
 
-        /*correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación","gencovending@gmail.com", mensaje_str);
+        correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación","gencovending@gmail.com", mensaje_str);
         correo.enviarCorreo();
 
         correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación","diazserranoricardo1@gmail.com", mensaje_str);
-        correo.enviarCorreo();*/
+        correo.enviarCorreo();
     }
 
+    /**************  CAPTURA DE FOTOS  ***********************/
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        if (requestCode == 0) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED
+                    && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
+                captureImage();
+            }
+        }
+    }
+    private void captureImage2()
+    {
+        try {
+            Intent cameraIntent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
+            photoFile = createImageFile4();
+            if(photoFile!=null)
+            {
+                //displayMessage(getBaseContext(),photoFile.getAbsolutePath());
+                Log.i("Mayank",photoFile.getAbsolutePath());
+                photoURI = Uri.fromFile(photoFile);
+                Toast.makeText(getApplicationContext(), photoURI.toString(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext(), "photoURI.toString()", Toast.LENGTH_SHORT).show();
+                cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
+                startActivityForResult(cameraIntent, CAPTURE_IMAGE_REQUEST);
+
+            }
+        }
+        catch (Exception e)
+        {
+            Toast.makeText(getApplicationContext(),"Camera is not available.",Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "", Toast.LENGTH_SHORT).show();
+        }
+    }
+    private void captureImage()
+    {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[] { Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE }, 0);
+        }
+        else
+        {
+            Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
+                // Create the File where the photo should go
+
+                try {
+
+                    photoFile = createImageFile();
+                    //displayMessage(getBaseContext(),photoFile.getAbsolutePath());
+                    Log.i("Mayank",photoFile.getAbsolutePath());
+
+                    // Continue only if the File was successfully created
+                    if (photoFile != null) {
+                        photoURI = FileProvider.getUriForFile(this,
+                                "com.example.aracelylj.amusemeapp.fileprovider",
+                                photoFile);
+                        takePictureIntent.putExtras(getIntent().getExtras());
+                        takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
+                        startActivityForResult(takePictureIntent, CAPTURE_IMAGE_REQUEST);
+                        if (!arrayFotos.contains(indicadorFoto))
+                            arrayFotos.add(indicadorFoto);
+                    }
+                } catch (Exception ex) {
+                    showDialog(getApplicationContext(),ex.getMessage(),"OK");
+                }
+
+
+            }else
+            {
+                //displayMessage(getBaseContext(),"Nullll");
+            }
+        }
+
+
+
+    }
+    private File createImageFile4()
+    {
+        // External sdcard location
+        File mediaStorageDir = new File(
+                Environment
+                        .getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
+                IMAGE_DIRECTORY_NAME);
+        // Create the storage directory if it does not exist
+        if (!mediaStorageDir.exists()) {
+            if (!mediaStorageDir.mkdirs()) {
+                Toast.makeText(this, "Unable to create directory.", Toast.LENGTH_SHORT).show();
+                return null;
+            }
+        }
+
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss",
+                Locale.getDefault()).format(new Date());
+        File mediaFile = new File(mediaStorageDir.getPath() + File.separator
+                + "IMG_" + timeStamp + ".jpg");
+
+        return mediaFile;
+
+    }
+    private File createImageFile() throws IOException {
+        // Create an image file name
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        String imageFileName = "JPEG_" + timeStamp + "_";
+        File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+        File image = File.createTempFile(
+                imageFileName,  /* prefix */
+                ".jpg",         /* suffix */
+                storageDir      /* directory */
+        );
+
+        // Save a file: path for use with ACTION_VIEW intents
+        mCurrentPhotoPath = image.getAbsolutePath();
+        return image;
+    }
+    private void showDialog(Context context, String msg, String button){
+        AlertDialog.Builder builder = new AlertDialog.Builder(RegistrarContadores.this);
+        builder.setMessage(msg)
+                .setPositiveButton(button, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                    }
+                }).setCancelable(false);
+        builder.create().show();
+    }
+    private void activeTakePhoto() {
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
+                || ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE}, 110);
+        } else {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                captureImage();
+            }
+            else
+            {
+                captureImage2();
+            }
+        }
+        String dateTime = "";
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            dateTime = LocalDateTime.now().toString();
+        }else{
+            dateTime = Global.fechaDate.toString();
+        }
+        SimpleDateFormat yy = new SimpleDateFormat("YY");
+        SimpleDateFormat mm = new SimpleDateFormat("MM");
+        SimpleDateFormat dd = new SimpleDateFormat("dd");
+        Date date = new Date();
+        String f = yy.format(date) + "_" + mm.format(date)  + "_" + dd.format(date);
+
+        indicadorFoto = idNom_Contadores.get(band);
+        // uploadImage(photoURI,ubicacionImagen);
+        ubicacionImagen = "contadores/"
+                + sucursalMaqActual + "/" + f;
+        String nombre = aliasMaqActual+"_"+indicadorFoto+"_"+dateTime+"_"+ new Random().nextInt(9999);
+
+        arrayUris.add(photoURI);
+        arrayUbi.add(ubicacionImagen);
+        arrayNombres.add(nombre);
+
+    }
+
+    public void uploadImages(ArrayList<Uri> photoURIs, ArrayList<String> ubicaciones, ArrayList<String> nombres){
+        try {
+            FirebaseStorage storage = FirebaseStorage.getInstance();
+            StorageReference storageReference;
+            for (int i =0 ; i < photoURIs.size(); i++) {
+                storageReference = storage.getReference(ubicaciones.get(i));
+                // final StorageReference ref = storageReference.child(Objects.requireNonNull(photoURIs.get(i).getLastPathSegment()));
+                final StorageReference ref = storageReference.child(nombres.get(i));
+                ref.putFile(photoURIs.get(i))
+                        .addOnSuccessListener(this, new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                            public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                            }
+                        });
+
+            }
+        }catch (Exception e){
+            Log.e("Error1", Objects.requireNonNull(e.getMessage()));
+        }
+
+
+    }
+    
     class ThreadCorreo implements Runnable {
 
         private int clave ;
@@ -1071,7 +1354,6 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
         @Override
         public void run() {
             if (msgPermission(Manifest.permission.SEND_SMS)){
-
                 SmsManager smsManager = SmsManager.getDefault();
                 smsManager.sendTextMessage(this.numero,null,this.mensaje,null,null);
             }else{
