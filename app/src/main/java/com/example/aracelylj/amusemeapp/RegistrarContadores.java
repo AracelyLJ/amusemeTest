@@ -832,14 +832,16 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
             new Thread(tsms).start();
             tsms = new ThreadSMS("4492121134","SE TERMINO DE REGISTRAR LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual));
             new Thread(tsms).start();
+            tsms = new ThreadSMS("4751073063","SE TERMINO DE REGISTRAR LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual));
+            new Thread(tsms).start();
             firebaseData.cleanCollection("temp_Registradas_"+firebaseData.currentUserID);
             //semana2.add(nvoRegistro);
-            try {
-                Global.sucReg.add(aliasMaqActual.charAt(0)+""+aliasMaqActual.charAt(1));
-            }catch (Exception e){
-                tsms = new ThreadSMS("4751073063","Errorr  "+e.toString());
-                new Thread(tsms).start();
-            }
+//            try {
+//                Global.sucReg.add(aliasMaqActual.charAt(0)+""+aliasMaqActual.charAt(1));
+//            }catch (Exception e){
+//                tsms = new ThreadSMS("4751073063","Errorr  "+e.toString());
+//                new Thread(tsms).start();
+//            }
             mensajeFinal();
         }
 
@@ -961,8 +963,8 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
 //        }
 
         //reporte_ganancias(restasDeContadores);
-//        ThreadCorreo tc = new ThreadCorreo(2);
-//        new Thread(tc).start();
+        ThreadCorreo tc = new ThreadCorreo(2);
+        new Thread(tc).start();
 
     }
 

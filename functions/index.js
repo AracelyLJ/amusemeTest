@@ -2,10 +2,10 @@ const admin = require("firebase-admin");
 admin.initializeApp();
 const functions = require("firebase-functions");
 const db = admin.firestore();
+const rtdb = admin.database();
 
 exports.https_function = functions.https.onRequest((request, response) => {
   gettingData();
-  //whatsapp()
   response.status(200).send({data: "hey"});
 });
 async function gettingData() {
@@ -23,23 +23,57 @@ async function gettingData() {
   const sucs = await getSucursalesUsuario("gencovending1@gmail.com");
 
   const tXsucs = await realizarCalculos(valores, sucs);
-  console.log(tXsucs);
-
+  
   const totales = await calculoTotal(tXsucs);
   // console.log(totales);
   const tots = new Map();
   tots.set("sucursales", tXsucs);
   tots.set("totales", totales);
-  await generarReporte(tXsucs, totales);
-  return tots;
+  reporte = await generarReporte(tXsucs, totales);
+  await updateDB(tXsucs, totales);
+
 }
 
-async function generarReporte(tXsuc, totales){
-  var report = "";
-  report += tXsuc.get('AP').get('*coins');
-  console.log("report")
-  console.log(report);
+async function updateDB(tXsucs, total_final) {
+  var d = new Date(Date.now());
+  y = d.getFullYear();
+  m = d.getMonth()+1;
+  d = d.getDate();
+  var x = new Date();
+  h = x.getHours();
+  m = x.getMinutes();
+  s = x.getSeconds();
+  const fecha = y+"_"+m+"_"+d+"_"+h+":"+m+":"+s;
+  const totales = rtdb.ref('sucursalesRegistradas/'+fecha);
+
+  totales.set({
+    fecha: {
+      date_of_birth: 'June 23, 1912',
+      full_name: 'Alan Turing'
+    }
+  });
+
+}
+
+async function generarReporte(tXsuc, totales) {
+  var reporte = "Totales por sucursal:\n";
   // Aqui crear un for para ir formando el reporte por cada miembro del hashmap
+  for (const [key, value] of tXsuc) {
+    // console.log("\n" + key);
+    reporte += "\n" + key;
+    for (const [k, v] of value){
+        // console.log("\n" + k, v);
+        reporte += "\n   " + k + ": " + v;
+    }
+
+  }
+
+  total_final = await sumaDineroPrices(totales);
+  
+  
+  reporte += "\n\nTOTAL A DEPOSITAR: *" + total_final.get("dinero") + "*"
+              + "\nPremios ganados: "+total_final.get("prices");
+  return reporte;
 }
 
 // PARA LOS CÁLCULOS
@@ -143,6 +177,7 @@ async function aplicarMultiplicadores(restas) {
 }
 
 async function dineroPorDepositar(resultados) {
+  // const res = await db.collection("totales").doc("hoy").set(data);
   const tXsuc = new Map();
   for (const [key, value] of resultados) {
     const cve = key.charAt(0) + key.charAt(1);
@@ -160,7 +195,26 @@ async function dineroPorDepositar(resultados) {
       tXsuc.set(cve, dicAux);
     }
   }
+  console.log(tXsuc)
   return tXsuc;
+}
+
+async function sumaDineroPrices(totales){
+  var dinero = 0;
+  var prices = 0;
+  for (const [key, value] of totales){
+    // console.log(key, value)
+    if (key=="*prices"){
+      prices += totales.get(key);
+    }else{
+      dinero += totales.get(key);
+    }
+  }
+  total_final = new Map();
+  total_final.set("dinero", dinero);
+  total_final.set("prices", prices);
+
+  return total_final;
 }
 
 async function calculoTotal(tXsuc) {
@@ -178,13 +232,15 @@ async function calculoTotal(tXsuc) {
   return totales;
 }
 
-async function whatsapp(){
-  var client = require("twilio")("ACb540a5ac308a9e20f7d5734ca0b82fea", "ed0469a9e5f65b9e2efc36f57b054e78");
+async function whatsapp(msj) {
+  const sid = "ACb540a5ac308a9e20f7d5734ca0b82fea";
+  const token = "b1e48d39ace18f6b6a89499750e368b2";
+  const client = require("twilio")(sid, token);
   console.log("sending msg");
 
   client.messages.create({
     from: "whatsapp:+14155238886",
-    body: "hola",
-    to: "whatsapp:+5214751073063"
-  }).then(message => console.log(message.sid));
+    body: msj,
+    to: "whatsapp:+5214751073063",
+  }).then((message) => console.log(message.sid));
 }
