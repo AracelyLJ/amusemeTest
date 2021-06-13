@@ -23,56 +23,69 @@ async function gettingData() {
   const sucs = await getSucursalesUsuario("gencovending1@gmail.com");
 
   const tXsucs = await realizarCalculos(valores, sucs);
-  
+
   const totales = await calculoTotal(tXsucs);
   // console.log(totales);
   const tots = new Map();
   tots.set("sucursales", tXsucs);
   tots.set("totales", totales);
-  reporte = await generarReporte(tXsucs, totales);
+  const reporte = await generarReporte(tXsucs, totales);
+  console.log(reporte);
   await updateDB(tXsucs, totales);
-
 }
 
-async function updateDB(tXsucs, total_final) {
-  var d = new Date(Date.now());
-  y = d.getFullYear();
-  m = d.getMonth()+1;
-  d = d.getDate();
-  var x = new Date();
-  h = x.getHours();
-  m = x.getMinutes();
-  s = x.getSeconds();
-  const fecha = y+"_"+m+"_"+d+"_"+h+":"+m+":"+s;
-  const totales = rtdb.ref('sucursalesRegistradas/'+fecha);
-
-  totales.set({
-    fecha: {
-      date_of_birth: 'June 23, 1912',
-      full_name: 'Alan Turing'
+async function updateDB(tXsucs, totalFinal) {
+  const dt = new Date(Date.now());
+  const y = dt.getFullYear();
+  const mt = dt.getMonth()+1;
+  const d = dt.getDate();
+  const x = new Date();
+  const h = x.getHours();
+  const m = x.getMinutes();
+  const s = x.getSeconds();
+  const fecha = y+"_"+mt+"_"+d+"_"+h+":"+m+":"+s;
+  const totales = rtdb.ref("calculosSemanales/"+fecha);
+  const totalessdb = db.collection("calculosSemanales");
+  let calcs = "{";
+  let aux = "";
+  for (const [key, value] of tXsucs) {
+    calcs += "\"" + key+"\": ";
+    aux = "{";
+    for (const [k, v] of value) {
+      aux += "\"" + k + "\": " + v + ",";
     }
+    aux = aux.substring(0, aux.length - 1);
+    aux += "},";
+    calcs += aux;
+  }
+  aux = "\"TOTAL\": {";
+  for (const [key, value] of totalFinal){
+    aux += "\"" + key +"\": "+ value +", "
+  }
+  aux = aux.substring(0, aux.length-2) + "}";
+  calcs += aux + "}"
+  console.log(calcs);
+  const calculos = JSON.parse(calcs);
+  totales.set({
+    calculos
   });
-
+  totalessdb.doc(fecha).set(calculos);
 }
 
 async function generarReporte(tXsuc, totales) {
-  var reporte = "Totales por sucursal:\n";
+  let reporte = "\nTotales por sucursal:";
   // Aqui crear un for para ir formando el reporte por cada miembro del hashmap
   for (const [key, value] of tXsuc) {
     // console.log("\n" + key);
     reporte += "\n" + key;
-    for (const [k, v] of value){
-        // console.log("\n" + k, v);
-        reporte += "\n   " + k + ": " + v;
+    for (const [k, v] of value) {
+      reporte += "\n   " + k + ": " + v;
     }
-
   }
 
-  total_final = await sumaDineroPrices(totales);
-  
-  
-  reporte += "\n\nTOTAL A DEPOSITAR: *" + total_final.get("dinero") + "*"
-              + "\nPremios ganados: "+total_final.get("prices");
+  const totalFinal = await sumaDineroPrices(totales);
+  reporte += "\n\nTOTAL A DEPOSITAR: *" + totalFinal.get("dinero") + "*" +
+              "\nPremios ganados: "+totalFinal.get("prices");
   return reporte;
 }
 
@@ -195,32 +208,33 @@ async function dineroPorDepositar(resultados) {
       tXsuc.set(cve, dicAux);
     }
   }
-  console.log(tXsuc)
+  console.log(tXsuc);
   return tXsuc;
 }
 
-async function sumaDineroPrices(totales){
-  var dinero = 0;
-  var prices = 0;
-  for (const [key, value] of totales){
+async function sumaDineroPrices(totales) {
+  let dinero = 0;
+  let prices = 0;
+  for (const [key, value] of totales) {
     // console.log(key, value)
-    if (key=="*prices"){
+    console.log(value);
+    if (key=="*prizes") {
       prices += totales.get(key);
-    }else{
+    } else {
       dinero += totales.get(key);
     }
   }
-  total_final = new Map();
-  total_final.set("dinero", dinero);
-  total_final.set("prices", prices);
+  const totalFinal = new Map();
+  totalFinal.set("dinero", dinero);
+  totalFinal.set("prices", prices);
 
-  return total_final;
+  return totalFinal;
 }
 
-async function calculoTotal(tXsuc) {
+async function calculoTotal(tXsucs) {
   const totales = new Map();
-  for (const [key] of tXsuc) {
-    for (const [k, v] of tXsuc.get(key)) {
+  for (const [key] of tXsucs) {
+    for (const [k, v] of tXsucs.get(key)) {
       if (totales.has(k)) {
         const aux = v;
         totales.set(k, aux + totales.get(k));
@@ -230,17 +244,4 @@ async function calculoTotal(tXsuc) {
     }
   }
   return totales;
-}
-
-async function whatsapp(msj) {
-  const sid = "ACb540a5ac308a9e20f7d5734ca0b82fea";
-  const token = "b1e48d39ace18f6b6a89499750e368b2";
-  const client = require("twilio")(sid, token);
-  console.log("sending msg");
-
-  client.messages.create({
-    from: "whatsapp:+14155238886",
-    body: msj,
-    to: "whatsapp:+5214751073063",
-  }).then((message) => console.log(message.sid));
 }
