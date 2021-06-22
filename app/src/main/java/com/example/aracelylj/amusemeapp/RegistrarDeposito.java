@@ -104,6 +104,7 @@ public class RegistrarDeposito extends AppCompatActivity implements View.OnClick
                 break;
             case R.id.registrarDeposito:
                 registrarDeposito();
+                // correoCalculosSemanales();
                 break;
         }
     }
@@ -315,6 +316,9 @@ public class RegistrarDeposito extends AppCompatActivity implements View.OnClick
         correo.enviarCorreo();
 
 
+    }
+    public void correoCalculosSemanales(){
+        firebaseData.getCalculosSemanales();
     }
     class ThreadCorreo implements Runnable {
 

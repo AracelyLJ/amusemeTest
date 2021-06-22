@@ -51,8 +51,12 @@ import android.widget.Toast;
 import com.example.aracelylj.amusemeapp.Correo.EnviarCorreo;
 import com.firebase.client.DataSnapshot;
 import com.firebase.client.Firebase;
+import com.google.android.gms.tasks.Continuation;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.functions.FirebaseFunctions;
+import com.google.firebase.functions.HttpsCallableResult;
 import com.google.firebase.iid.Registrar;
 import com.google.firebase.ml.vision.FirebaseVision;
 import com.google.firebase.ml.vision.common.FirebaseVisionImage;
@@ -137,6 +141,7 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
     private String destinatarioCorreo;
 
     private String msjFinalCorreo;
+    private FirebaseFunctions mFunctions;
 
     static final int REQUEST_IMAGE_CAPTURE = 1;
     private final int SEND_SMS_PERMISSION_REQUEST_CODE = 1;
@@ -177,6 +182,7 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
         //  Actualizar temporales
         Global.temp_Registradas = firebaseData.get_tempRegistradas();
         Global.temp_Faltantes = firebaseData.get_tempFaltantes();
+        mFunctions = FirebaseFunctions.getInstance();
 
         // Comprobaciones de registros anteriores
         if (Global.temp_Registradas.isEmpty()){
@@ -290,23 +296,7 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
             contValues = preRegistro();
             if (contValues!=null)
                 registrarContadores();
-            /*HashMap<String,String> valores = null;
-            valores = preRegistro();
-
-            if (valores != null){
-                dialogoValores();
-            }*/
-//            Toast.makeText(getApplicationContext(), "Tamaño: "+arrayFotos.size(), Toast.LENGTH_SHORT).show();
-//            Toast.makeText(getApplicationContext(), arrayFotos.toString(), Toast.LENGTH_SHORT).show();
-
-
         }
-        /*else if(v.getId() == R.id.camPrizes){
-            band = R.id.camPrizes;
-            dispatchTakePictureIntent();
-        }
-
-        }*/
 
     }
     public void initializeViews()
@@ -683,17 +673,17 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
         }
 
         // Si en alguna máquina se ganó algún premio
-//        if (saca_premio(contAnteriores,contValues)) {
-//            ThreadSMS tsms = new ThreadSMS("4751073063","--IMPORTANTE-- SE HAN GANADO PREMIOS EN LA MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)
-//                    + " DE LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+"\nREGISTRADO POR USUARIO"+firebaseData.getUsuarioActivo());
-//            new Thread(tsms).start();
-//           tsms = new ThreadSMS("4491057920","--IMPORTANTE-- SE HAN GANADO PREMIOS EN LA MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)
-//                    + " DE LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+"\nREGISTRADO POR USUARIO"+firebaseData.getUsuarioActivo());
-//            new Thread(tsms).start();
-//            tsms = new ThreadSMS("4492121134","--IMPORTANTE-- SE HAN GANADO PREMIOS EN LA MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)
-//                    + " DE LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+"\nREGISTRADO POR USUARIO"+firebaseData.getUsuarioActivo());
-//            new Thread(tsms).start();
-//        }
+        if (saca_premio(contAnteriores,contValues)) {
+            ThreadSMS tsms = new ThreadSMS("4751073063","--IMPORTANTE-- SE HAN GANADO PREMIOS EN LA MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)
+                    + " DE LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+"\nREGISTRADO POR USUARIO"+firebaseData.getUsuarioActivo());
+            new Thread(tsms).start();
+           tsms = new ThreadSMS("4491057920","--IMPORTANTE-- SE HAN GANADO PREMIOS EN LA MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)
+                    + " DE LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+"\nREGISTRADO POR USUARIO"+firebaseData.getUsuarioActivo());
+            new Thread(tsms).start();
+            tsms = new ThreadSMS("4492121134","--IMPORTANTE-- SE HAN GANADO PREMIOS EN LA MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)
+                    + " DE LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+"\nREGISTRADO POR USUARIO"+firebaseData.getUsuarioActivo());
+            new Thread(tsms).start();
+        }
 
 
         return contValues;
@@ -783,23 +773,6 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
         nvoRegistro.put("usuario",firebaseData.currentUserID);
         nvoRegistro.put("contRegistro",String.valueOf(contSem1+1));
 
-            // Crear contadores
-        String coinsReg="";
-        for (HashMap.Entry<String, String> entry : contValues.entrySet()) {
-            nvoRegistro.put(entry.getKey(),entry.getValue());
-            if (entry.getKey().equals("*coins"))
-                coinsReg = entry.getValue();
-        }
-
-//        ThreadSMS tsms = new ThreadSMS("4751073063","MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)+ " REGISTRADA."+
-//                "\nSUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+" \nUSUARIO: "+firebaseData.getUsuarioActivo()+"\n VALOR CONTADOR: "+coinsReg);
-//        new Thread(tsms).start();
-//        tsms = new ThreadSMS("4491057920","MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)+ " REGISTRADA."+
-//                "\nSUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+" \nUSUARIO: "+firebaseData.getUsuarioActivo()+"\n VALOR CONTADOR: "+coinsReg);
-//        new Thread(tsms).start();
-//        tsms = new ThreadSMS("4492121134","MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)+ " REGISTRADA."+
-//                "\nSUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+" \nUSUARIO: "+firebaseData.getUsuarioActivo()+"\n VALOR CONTADOR: "+coinsReg);
-//        new Thread(tsms).start();
              //Update Data Base
         firebaseData.put_registroContador(nvoRegistro);
         firebaseData.put_tempRegistradas(aliasMaqActual);
@@ -810,8 +783,6 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
         Global.temp_Faltantes = firebaseData.get_tempFaltantes();
         int x = Global.maqsxsucursal.size()-Global.temp_Registradas.size()-1;
 
-        /*int numFaltantes = Global.temp_Faltantes.size()-1;
-        String mensaje = "";*/
 
         if (x>1){
             //nuevaBurbuja(x);
@@ -828,20 +799,14 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
             firebaseData.ref.child("usuarios").child(firebaseData.currentUserID).child("sucRegistradas").
                     setValue(getStringSucReg());
         }else{
-            ThreadSMS tsms = new ThreadSMS("4491057920","SE TERMINO DE REGISTRAR LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual));
+            ThreadSMS tsms = new ThreadSMS("4751073063","SE TERMINO DE REGISTRAR LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual));
             new Thread(tsms).start();
             tsms = new ThreadSMS("4492121134","SE TERMINO DE REGISTRAR LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual));
             new Thread(tsms).start();
-            tsms = new ThreadSMS("4751073063","SE TERMINO DE REGISTRAR LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual));
+            tsms = new ThreadSMS("4491057920","SE TERMINO DE REGISTRAR LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual));
             new Thread(tsms).start();
             firebaseData.cleanCollection("temp_Registradas_"+firebaseData.currentUserID);
-            //semana2.add(nvoRegistro);
-//            try {
-//                Global.sucReg.add(aliasMaqActual.charAt(0)+""+aliasMaqActual.charAt(1));
-//            }catch (Exception e){
-//                tsms = new ThreadSMS("4751073063","Errorr  "+e.toString());
-//                new Thread(tsms).start();
-//            }
+            realizarCalculosSemanales("Calculando...");
             mensajeFinal();
         }
 
@@ -1042,29 +1007,29 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
             finalMsg.setText("Se terminó de registrar la sucursal: " + sucursalMaqActual + " \n\n ¡TERMINASTE DE REGISTRAR TODAS LAS SUCURSALES!");
             finalMsg.setTextColor(getResources().getColor(R.color.colorRojo));
         }
-        //boton para cerrar dialog
-        ImageView close = dialog.findViewById(R.id.imageView);
-        close.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                //dineroPorPagar();
-                //dialog.dismiss();
-                //Intent intent = new Intent(RegistrarContadores.this, MainActivity.class);
-                //startActivity(intent);
-            }
-        });
+//        //boton para cerrar dialog
+//        ImageView close = dialog.findViewById(R.id.imageView);
+//        close.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                //dineroPorPagar();
+//                //dialog.dismiss();
+//                //Intent intent = new Intent(RegistrarContadores.this, MainActivity.class);
+//                //startActivity(intent);
+//            }
+//        });
         // Botón para enviar cálculos y actualizar BD
         Button doneButton = dialog.findViewById(R.id.sucDoneButton);
         doneButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
                 //dineroPorPagar();
                 if (sucFaltantes.isEmpty()){
                     firebaseData.ref.child("usuarios").child(firebaseData.currentUserID).child("sucRegistradas").setValue("");
                 }else{
                     firebaseData.ref.child("usuarios").child(firebaseData.currentUserID).child("sucRegistradas").
                             setValue(getStringSucReg()+aliasMaqActual.charAt(0)+""+aliasMaqActual.charAt(1)+",");
+                    // TODO ENVIAR CORREO CON CÁLCULOS
                     Intent intent = new Intent(RegistrarContadores.this, MainActivity.class);
                     startActivity(intent);
                 }
@@ -1075,6 +1040,30 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
         dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         dialog.show();
     }
+    public Task<String> realizarCalculosSemanales(String text) {
+        // Create the arguments to the callable function.
+        Map<String, Object> data = new HashMap<>();
+        data.put("text", text);
+        data.put("push", true);
+
+        Toast.makeText(getApplicationContext(), "Calculando valores por sucursal...", Toast.LENGTH_SHORT).show();
+
+        return mFunctions
+                .getHttpsCallable("https_function")
+                .call(data)
+                .continueWith(new Continuation<HttpsCallableResult, String>() {
+                    @Override
+                    public String then(@NonNull Task<HttpsCallableResult> task) throws Exception {
+                        // This continuation runs on either success or failure, but if the task
+                        // has failed then getResult() will throw an Exception which will be
+                        // propagated down.
+                        String result = (String) task.getResult().getData();
+                        Toast.makeText(getApplicationContext(), result, Toast.LENGTH_SHORT).show();
+                        return result;
+                    }
+                });
+    }
+
     public String getStringSucReg(){
         StringBuffer strSR = new StringBuffer();
         for (String s : Global.sucReg){

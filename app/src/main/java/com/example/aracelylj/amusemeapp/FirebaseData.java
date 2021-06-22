@@ -54,6 +54,7 @@ public class FirebaseData extends AppCompatActivity {
     ArrayList<HashMap<String,String>> regXsemana;
 
     public ArrayList<HashMap<String,String>> tipos;
+    public ArrayList<HashMap<String,String>> calculos;
     public HashMap<String,String> sucursales;
     public HashMap<String,String> usuarios;
     public ArrayList<String> maquinasRegistradas, maquinasFaltantes;
@@ -94,6 +95,7 @@ public class FirebaseData extends AppCompatActivity {
         maquinas = new ArrayList<>();
         sucursales = new HashMap<>();
         tipos = new ArrayList<>();
+        calculos = new ArrayList<>();
 
         maquinasRegistradas = new ArrayList<>();
         maquinasFaltantes = new ArrayList<>();
@@ -487,6 +489,42 @@ public class FirebaseData extends AppCompatActivity {
     }
     public String getDepositoUsuario(String id){
         return Global._dataSnapshot.child("usuarios").child(id).child("porDepositar").getValue().toString();
+    }
+    public void getCalculosSemanales(){
+//        /* Retornará el ultimo calculo de la sucursal que se realizó */
+        DataSnapshot dataSnapshot = Global._dataSnapshot.child("calculosSemanales");
+        Toast.makeText(context, dataSnapshot.getChildren().toString(), Toast.LENGTH_SHORT).show();
+//        // final ArrayList<HashMap<String,String>> calculos = new ArrayList<>();
+//        db.collection("calculosSemanales")
+//                .get()
+//                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+//                    @Override
+//                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
+//                        if (task.isSuccessful()) {
+//                            show_progressDialog("Obteniendo calculos...");
+//                            for (QueryDocumentSnapshot document : task.getResult()) {
+//                                //Toast.makeText(context, document.getId() + " => " + document.getData(), Toast.LENGTH_SHORT).show();
+//                                HashMap<String, String> c = new HashMap<>();
+//                                c.put(document.getId(), document.getData().toString());
+//                                calculos.add(c);
+////                                HashMap<String,String> calculo = new HashMap<>();
+////                                calculo.put("clave",document.get("clave").toString());
+////                                calculo.put("nombre",document.get("nombre").toString());
+////                                calculo.put("contadores",document.get("contadores").toString());
+////                                calculo.put("observaciones",document.get("observaciones").toString());
+////                                //Toast.makeText(context, document.getId() + " => " + document.getData(), Toast.LENGTH_SHORT).show();
+////                                tipos.add(calculo);
+//                            }
+//                            progressDialog.cancel();
+//                        } else {
+//                            Toast.makeText(context, "Error:  "+ "Error getting documents."+ task.getException(), Toast.LENGTH_SHORT).show();
+//
+//                        }
+//                    }
+//                });
+//        Toast.makeText(context, "Datos:", Toast.LENGTH_SHORT).show();
+//        Toast.makeText(context, calculos.toString(), Toast.LENGTH_SHORT).show();
+//        return calculos;
     }
 
 

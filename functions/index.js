@@ -6,20 +6,35 @@ const rtdb = admin.database();
 
 exports.https_function = functions.https.onRequest((request, response) => {
   gettingData();
-  response.status(200).send({data: "hey"});
+  // testingUpdate();
+  response.status(200).send({data: "Calculos registrados TESTING"});
 });
+
+exports.update_data = functions.https.onRequest((request, response) => {
+  testingUpdate();
+  const totales = rtdb.ref("testing");
+  // const totalessdb = db.collection("testing");
+  totales.set({
+    hola: "holis",
+  });
+  // totalessdb.doc("test").set("test");
+  response.status(200).send({data: "testeando"});
+});
+
 async function gettingData() {
   const citiesRef = db.collection("maquinasRegistradas");
-  const snapshot = await citiesRef.orderBy("fecha", "desc").limit(100).get();
+  const snapshot = await citiesRef.orderBy("fecha", "desc").limit(300).get();
   if (snapshot.empty) {
     console.log("No matching documents.");
     return;
   }
   const valores = [];
   snapshot.forEach((doc) => {
-    valores.push(doc.data());
+    // console.log(doc.data());
+    if (doc.data()["usuario"]=="Zrx4i43aadebschw2G3FDlP9QJd2") {
+      valores.push(doc.data());
+    }
   });
-
   const sucs = await getSucursalesUsuario("gencovending1@gmail.com");
 
   const tXsucs = await realizarCalculos(valores, sucs);
@@ -34,16 +49,24 @@ async function gettingData() {
   await updateDB(tXsucs, totales);
 }
 
+async function testingUpdate() {
+  const totales = rtdb.ref("calculosSemanales/cs");
+  const totalessdb = db.collection("calculosSemanales");
+  totales.set({
+    hola: "holis",
+  });
+  totalessdb.doc("cs").set("test");
+  totales.set({
+    hola: "holis",
+  });
+}
+
 async function updateDB(tXsucs, totalFinal) {
   const dt = new Date(Date.now());
   const y = dt.getFullYear();
   const mt = dt.getMonth()+1;
   const d = dt.getDate();
-  const x = new Date();
-  const h = x.getHours();
-  const m = x.getMinutes();
-  const s = x.getSeconds();
-  const fecha = y+"_"+mt+"_"+d+"_"+h+":"+m+":"+s;
+  const fecha = y+"_"+mt+"_"+d;
   const totales = rtdb.ref("calculosSemanales/"+fecha);
   const totalessdb = db.collection("calculosSemanales");
   let calcs = "{";
@@ -59,15 +82,15 @@ async function updateDB(tXsucs, totalFinal) {
     calcs += aux;
   }
   aux = "\"TOTAL\": {";
-  for (const [key, value] of totalFinal){
-    aux += "\"" + key +"\": "+ value +", "
+  for (const [key, value] of totalFinal) {
+    aux += "\"" + key +"\": "+ value +", ";
   }
   aux = aux.substring(0, aux.length-2) + "}";
-  calcs += aux + "}"
+  calcs += aux + "}";
   console.log(calcs);
   const calculos = JSON.parse(calcs);
   totales.set({
-    calculos
+    calculos,
   });
   totalessdb.doc(fecha).set(calculos);
 }
@@ -110,21 +133,23 @@ async function realizarCalculos(valores, sucursales) {
   const mapSem2 = new Map();
   valores.forEach(function(valor) {
     const temp = new Map();
+    const sucValor = valor["alias"].charAt(0)+valor["alias"].charAt(1);
     for (const [key, value] of Object.entries(valor)) {
       if (key.startsWith("*")) {
         temp.set(key, value);
       }
     }
-    // TO DO: Revisar que sean las sucursales correctas
-    if (!mapSem1.has(valor["alias"])) {
-      mapSem1.set(valor["alias"], temp);
-    } else if (!mapSem2.has(valor["alias"])) {
-      mapSem2.set(valor["alias"], temp);
+    if (sucursales.includes(sucValor)) {
+      if (!mapSem1.has(valor["alias"])) {
+        mapSem1.set(valor["alias"], temp);
+      } else if (!mapSem2.has(valor["alias"])) {
+        mapSem2.set(valor["alias"], temp);
+      }
     }
   });
-
   // RESTAS
   const restas = realizarRestas(mapSem1, mapSem2);
+  console.log(restas);
   // MULTIPLICADORES Y DIVISORES
   const resultados = await aplicarMultiplicadores(restas);
   // DINERO POR DEPOSITAR
@@ -175,17 +200,21 @@ async function aplicarMultiplicadores(restas) {
     const key = clave.charAt(2) + clave.charAt(3);
     const c = conts.get(key);
     const valContsFinal = new Map();
-    valor.forEach(function(val, cve) {
-      if (c.has(cve)) {
-        valContsFinal.set(cve, valor.get(cve) * c.get(cve).get("m"));
-      } else {
-        valContsFinal.set(cve, valor.get(cve));
-      }
-    });
-    calcFinal.set(clave, valContsFinal);
+    console.log(valor);
+    if (valor.size > 0) {
+      valor.forEach(function(val, cve) {
+        if (c.has(cve)) {
+          valContsFinal.set(cve, valor.get(cve) * c.get(cve).get("m"));
+        } else {
+          valContsFinal.set(cve, valor.get(cve));
+        }
+      });
+      calcFinal.set(clave, valContsFinal);
+    }
   });
 
   const mapAsc = new Map([...calcFinal.entries()].sort());
+  console.log(mapAsc);
   return mapAsc;
 }
 
