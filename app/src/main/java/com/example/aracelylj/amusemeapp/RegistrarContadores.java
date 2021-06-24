@@ -667,10 +667,10 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
         if (hay_cont_menor(contAnteriores,contValues)) return null;
 
         // Faltan fotos por tomar
-        if (editTexts.size()+1 != arrayFotos.size()) {
-            Global.dialogo("Es nesario tomar fotografía a todos los contadores", RegistrarContadores.this);
-            return null;
-        }
+//        if (editTexts.size()+1 != arrayFotos.size()) {
+//            Global.dialogo("Es nesario tomar fotografía a todos los contadores", RegistrarContadores.this);
+//            return null;
+//        }
 
         // Si en alguna máquina se ganó algún premio
         if (saca_premio(contAnteriores,contValues)) {
@@ -773,6 +773,12 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
         nvoRegistro.put("usuario",firebaseData.currentUserID);
         nvoRegistro.put("contRegistro",String.valueOf(contSem1+1));
 
+            // Crear contadores
+        for (HashMap.Entry<String, String> entry : contValues.entrySet()) {
+            nvoRegistro.put(entry.getKey(),entry.getValue());
+        }
+
+
              //Update Data Base
         firebaseData.put_registroContador(nvoRegistro);
         firebaseData.put_tempRegistradas(aliasMaqActual);
@@ -806,7 +812,6 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
             tsms = new ThreadSMS("4491057920","SE TERMINO DE REGISTRAR LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual));
             new Thread(tsms).start();
             firebaseData.cleanCollection("temp_Registradas_"+firebaseData.currentUserID);
-            realizarCalculosSemanales("Calculando...");
             mensajeFinal();
         }
 
@@ -884,7 +889,7 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
     {
         if (semana1.isEmpty()){
             Toast.makeText(getApplicationContext(), "No hay registros de la semana anterior.", Toast.LENGTH_SHORT).show();
-            ThreadCorreo tc = new ThreadCorreo(3);
+            ThreadCorreo tc = new ThreadCorreo(-1);
             new Thread(tc).start();
             return;
         }
@@ -1024,12 +1029,15 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
             @Override
             public void onClick(View v) {
                 //dineroPorPagar();
+                realizarCalculosSemanales("Calculando...");
                 if (sucFaltantes.isEmpty()){
                     firebaseData.ref.child("usuarios").child(firebaseData.currentUserID).child("sucRegistradas").setValue("");
+                    // Se mandan los cálculos
+                    ThreadCorreo tc = new ThreadCorreo(3);
+                    new Thread(tc).start();
                 }else{
                     firebaseData.ref.child("usuarios").child(firebaseData.currentUserID).child("sucRegistradas").
                             setValue(getStringSucReg()+aliasMaqActual.charAt(0)+""+aliasMaqActual.charAt(1)+",");
-                    // TODO ENVIAR CORREO CON CÁLCULOS
                     Intent intent = new Intent(RegistrarContadores.this, MainActivity.class);
                     startActivity(intent);
                 }
@@ -1130,6 +1138,45 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
         correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación","diazserranoricardo1@gmail.com", mensaje_str);
         correo.enviarCorreo();
     }
+    public void correosCalculosSemanales(){
+        SimpleDateFormat yy = new SimpleDateFormat("YYYY");
+        SimpleDateFormat mm = new SimpleDateFormat("M");
+        SimpleDateFormat dd = new SimpleDateFormat("dd");
+        Date date = new Date();
+        String f = yy.format(date) + "_" + mm.format(date)  + "_" + "23"; //dd.format(date);
+        Toast.makeText(getApplicationContext(), f, Toast.LENGTH_SHORT).show();
+
+        HashMap<String, ArrayList<String>> calcs = firebaseData.getCalculosSemanales(f);
+
+        String mensaje_str = "Cálculos de dinero por depositar esta semana: <br></br><br></br>";
+
+        for(Map.Entry<String ,ArrayList<String>>entry:calcs.entrySet()){
+
+            if (!entry.getKey().equals("TOTAL")){
+                mensaje_str += entry.getKey() + "<br></br>";
+                for (int i=0; i<entry.getValue().size(); i++){
+                    mensaje_str += "&nbsp;&nbsp;&nbsp;&nbsp;" + entry.getValue().get(i) + "<br></br>";
+                }
+            }
+
+        }
+        mensaje_str += "<br></br>TOTAL: <br></br>";
+        for (int i=0; i<calcs.get("TOTAL").size(); i++){
+            mensaje_str += "&nbsp;&nbsp;&nbsp;&nbsp;" + calcs.get("TOTAL").get(i) + "<br></br>";
+        }
+
+        correo = new EnviarCorreo("$$$ SUCURSALES REGISTRADAS $$$ AmuseMe Notificación",
+                destinatarioCorreo, mensaje_str);
+        correo.enviarCorreo();
+
+        correo = new EnviarCorreo("$$$ SUCURSALES REGISTRADAS $$$ AmuseMe Notificación","gencovending@gmail.com", mensaje_str);
+        correo.enviarCorreo();
+
+        correo = new EnviarCorreo("$$$ SUCURSALES REGISTRADAS $$$ AmuseMe Notificación","diazserranoricardo1@gmail.com", mensaje_str);
+        correo.enviarCorreo();
+
+    }
+
 
     /**************  CAPTURA DE FOTOS  ***********************/
     @Override
@@ -1327,6 +1374,8 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
                 correosIniciar();
             }else if (clave==2){
                 correosTerminar();
+            }else if (clave == 3){
+                correosCalculosSemanales();
             }else{
                 correosNoSemanaAnterior();
             }

@@ -490,41 +490,17 @@ public class FirebaseData extends AppCompatActivity {
     public String getDepositoUsuario(String id){
         return Global._dataSnapshot.child("usuarios").child(id).child("porDepositar").getValue().toString();
     }
-    public void getCalculosSemanales(){
-//        /* Retornará el ultimo calculo de la sucursal que se realizó */
-        DataSnapshot dataSnapshot = Global._dataSnapshot.child("calculosSemanales");
-        Toast.makeText(context, dataSnapshot.getChildren().toString(), Toast.LENGTH_SHORT).show();
-//        // final ArrayList<HashMap<String,String>> calculos = new ArrayList<>();
-//        db.collection("calculosSemanales")
-//                .get()
-//                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
-//                    @Override
-//                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
-//                        if (task.isSuccessful()) {
-//                            show_progressDialog("Obteniendo calculos...");
-//                            for (QueryDocumentSnapshot document : task.getResult()) {
-//                                //Toast.makeText(context, document.getId() + " => " + document.getData(), Toast.LENGTH_SHORT).show();
-//                                HashMap<String, String> c = new HashMap<>();
-//                                c.put(document.getId(), document.getData().toString());
-//                                calculos.add(c);
-////                                HashMap<String,String> calculo = new HashMap<>();
-////                                calculo.put("clave",document.get("clave").toString());
-////                                calculo.put("nombre",document.get("nombre").toString());
-////                                calculo.put("contadores",document.get("contadores").toString());
-////                                calculo.put("observaciones",document.get("observaciones").toString());
-////                                //Toast.makeText(context, document.getId() + " => " + document.getData(), Toast.LENGTH_SHORT).show();
-////                                tipos.add(calculo);
-//                            }
-//                            progressDialog.cancel();
-//                        } else {
-//                            Toast.makeText(context, "Error:  "+ "Error getting documents."+ task.getException(), Toast.LENGTH_SHORT).show();
-//
-//                        }
-//                    }
-//                });
-//        Toast.makeText(context, "Datos:", Toast.LENGTH_SHORT).show();
-//        Toast.makeText(context, calculos.toString(), Toast.LENGTH_SHORT).show();
-//        return calculos;
+    public HashMap<String, ArrayList<String>> getCalculosSemanales(String date){
+        DataSnapshot dataSnapshot = Global._dataSnapshot.child("calculosSemanales").child(date).child("calculos");
+        HashMap<String, ArrayList<String>> hashMapReport = new HashMap<>();
+        for (DataSnapshot ds: dataSnapshot.getChildren()){
+            ArrayList<String> val = new ArrayList<>();
+            for (DataSnapshot ds1: ds.getChildren()){
+                val.add(ds1.getKey()+"  = "+ds1.getValue());
+            }
+            hashMapReport.put(ds.getKey(),val);
+        }
+        return hashMapReport;
     }
 
 

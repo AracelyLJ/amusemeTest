@@ -7,18 +7,7 @@ const rtdb = admin.database();
 exports.https_function = functions.https.onRequest((request, response) => {
   gettingData();
   // testingUpdate();
-  response.status(200).send({data: "Calculos registrados TESTING"});
-});
-
-exports.update_data = functions.https.onRequest((request, response) => {
-  testingUpdate();
-  const totales = rtdb.ref("testing");
-  // const totalessdb = db.collection("testing");
-  totales.set({
-    hola: "holis",
-  });
-  // totalessdb.doc("test").set("test");
-  response.status(200).send({data: "testeando"});
+  response.status(200).send({data: "Calculos registrados"});
 });
 
 async function gettingData() {
@@ -47,18 +36,6 @@ async function gettingData() {
   const reporte = await generarReporte(tXsucs, totales);
   console.log(reporte);
   await updateDB(tXsucs, totales);
-}
-
-async function testingUpdate() {
-  const totales = rtdb.ref("calculosSemanales/cs");
-  const totalessdb = db.collection("calculosSemanales");
-  totales.set({
-    hola: "holis",
-  });
-  totalessdb.doc("cs").set("test");
-  totales.set({
-    hola: "holis",
-  });
 }
 
 async function updateDB(tXsucs, totalFinal) {

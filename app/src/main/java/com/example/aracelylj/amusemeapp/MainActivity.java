@@ -36,6 +36,7 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
+import com.example.aracelylj.amusemeapp.Correo.EnviarCorreo;
 import com.firebase.client.DataSnapshot;
 import com.firebase.client.Firebase;
 import com.firebase.client.FirebaseError;
@@ -54,9 +55,11 @@ import com.google.firebase.functions.FirebaseFunctions;
 import com.google.firebase.functions.HttpsCallableResult;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingService;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.zxing.Result;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -110,9 +113,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         //direccion = null;
         firebaseData = new FirebaseData(this);
         firebaseData.getDBFija();
-        String nomUser = firebaseData.getUsuarioActivo(); /// ESTO NOSTA JALANDO
-        //Toast.makeText(getApplicationContext(), "Bienvenid@ "+nomUser, Toast.LENGTH_SHORT).show();
-        setTitle("Usuario: "+nomUser);
+        try {
+            String nomUser = firebaseData.getUsuarioActivo(); /// ESTO NOSTA JALANDO
+            //Toast.makeText(getApplicationContext(), "Bienvenid@ "+nomUser, Toast.LENGTH_SHORT).show();
+            setTitle("Usuario: "+nomUser);
+        }catch (Exception e){
+            Toast.makeText(getApplicationContext(), "User not found.", Toast.LENGTH_SHORT).show();
+        }
         //Toast.makeText(getApplicationContext(), "MÁQUINAS!! global: \n"+Global.maquinas, Toast.LENGTH_SHORT).show();
         //firebaseData.getDBTemp();
 
@@ -159,7 +166,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         switch (v.getId()){
             case R.id.registrarVisita:
                 Escanear();
-                // addMessage("hola");
                 break;
             case R.id.cerrarSesionUser:
                 FirebaseAuth.getInstance().signOut();
@@ -178,6 +184,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
         }
     }
+
 
     private void llamaratopico(){
         RequestQueue myrequest = Volley.newRequestQueue(getApplicationContext());
@@ -245,30 +252,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }catch (JSONException e){
             e.printStackTrace();
         }
-    }
-
-    public Task<String> addMessage(String text) {
-        // Create the arguments to the callable function.
-        Map<String, Object> data = new HashMap<>();
-        data.put("text", text);
-        data.put("push", true);
-
-        Toast.makeText(getApplicationContext(), "DENTRO DE FUNCIOOOON", Toast.LENGTH_SHORT).show();
-
-        return mFunctions
-                .getHttpsCallable("https_function")
-                .call(data)
-                .continueWith(new Continuation<HttpsCallableResult, String>() {
-                    @Override
-                    public String then(@NonNull Task<HttpsCallableResult> task) throws Exception {
-                        // This continuation runs on either success or failure, but if the task
-                        // has failed then getResult() will throw an Exception which will be
-                        // propagated down.
-                        String result = (String) task.getResult().getData();
-                        Toast.makeText(getApplicationContext(), result, Toast.LENGTH_SHORT).show();
-                        return result;
-                    }
-                });
     }
 
     /************************ PRESIONA ATRÁS EN LAS LOS LECTORES QR *******************/
@@ -466,5 +449,55 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    public void sendCalculos(){
+        SimpleDateFormat yy = new SimpleDateFormat("YYYY");
+        SimpleDateFormat mm = new SimpleDateFormat("M");
+        SimpleDateFormat dd = new SimpleDateFormat("dd");
+        Date date = new Date();
+        String f = yy.format(date) + "_" + mm.format(date)  + "_" + "23"; //dd.format(date);
+        Toast.makeText(getApplicationContext(), f, Toast.LENGTH_SHORT).show();
+
+        HashMap<String, ArrayList<String>> calcs = firebaseData.getCalculosSemanales(f);
+
+        String mensaje_str = "Cálculos de dinero por depositar esta semana: <br></br><br></br>";
+
+        for(Map.Entry<String ,ArrayList<String>>entry:calcs.entrySet()){
+
+            if (!entry.getKey().equals("TOTAL")){
+                mensaje_str += entry.getKey() + "<br></br>";
+                for (int i=0; i<entry.getValue().size(); i++){
+                    mensaje_str += "&nbsp;&nbsp;&nbsp;&nbsp;" + entry.getValue().get(i) + "<br></br>";
+                }
+            }
+
+        }
+        mensaje_str += "<br></br>TOTAL: <br></br>";
+        for (int i=0; i<calcs.get("TOTAL").size(); i++){
+            mensaje_str += "&nbsp;&nbsp;&nbsp;&nbsp;" + calcs.get("TOTAL").get(i) + "<br></br>";
+        }
+
+        Global.dialogo(mensaje_str, MainActivity.this);
+
+        EnviarCorreo correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación",
+                "aracelycat11@hotmail.com", mensaje_str);
+        correo.enviarCorreo();
+
+    }
+
+    class ThreadCorreo implements Runnable {
+
+        private int clave ;
+
+        ThreadCorreo(int clave){
+            this.clave = clave;
+        }
+
+        @Override
+        public void run() {
+            if (clave==1){
+                sendCalculos();
+            }
+        }
+    }
 
 }
