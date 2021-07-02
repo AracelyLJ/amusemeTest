@@ -4,15 +4,50 @@ const functions = require("firebase-functions");
 const db = admin.firestore();
 const rtdb = admin.database();
 
-exports.https_function = functions.https.onRequest((request, response) => {
-  gettingData();
-  // testingUpdate();
-  response.status(200).send({data: "Calculos registrados"});
+exports.https_function = functions.https.onCall((data, context) => {
+  // gettingData();
+  // response.status(200).send(data);
+
+  const text = data.text;
+  if (!(typeof text === "string") || text.length === 0) {
+    throw new functions.https.HttpsError("invalid-argument",
+        "The function must be called with " +
+        "one arguments text containing the message text to add.");
+  }
+  // Checking that the user is authenticated.
+  if (!context.auth) {
+    // Throwing an HttpsError so that the client gets the error details.
+    throw new functions.https.HttpsError("failed-precondition",
+        "The function must be called " +
+        "while authenticated.");
+  }
+  // [START authIntegration]
+  // Authentication / user information is automatically added to the request.
+  const uid = context.auth.uid;
+  const email = context.auth.token.email || null;
+  /* const name = context.auth.token.name || null;
+  const picture = context.auth.token.picture || null; */
+  gettingData(uid, email);
+  /* // [END authIntegration]
+  return admin.database().ref("/messages").push({
+    text: text,
+    user: {uid, name, picture, email},
+  }).then(() => {
+    console.log("New Message written");
+    // Returning the sanitized message to the client.
+    return {text: text};
+  })
+  // [END returnMessageAsync]
+      .catch((error) => {
+        throw new functions.https.HttpsError("unknown", error.message, error);
+      });
+  // [END_EXCLUDE] */
 });
 
-async function gettingData() {
+
+async function gettingData(uid, email) {
   const citiesRef = db.collection("maquinasRegistradas");
-  const snapshot = await citiesRef.orderBy("fecha", "desc").limit(300).get();
+  const snapshot = await citiesRef.orderBy("fecha", "desc").limit(50).get();
   if (snapshot.empty) {
     console.log("No matching documents.");
     return;
@@ -20,11 +55,13 @@ async function gettingData() {
   const valores = [];
   snapshot.forEach((doc) => {
     // console.log(doc.data());
-    if (doc.data()["usuario"]=="Zrx4i43aadebschw2G3FDlP9QJd2") {
+    if (doc.data()["usuario"]==uid) {
       valores.push(doc.data());
     }
   });
-  const sucs = await getSucursalesUsuario("gencovending1@gmail.com");
+
+  console.log(valores);
+  const sucs = await getSucursalesUsuario(email);
 
   const tXsucs = await realizarCalculos(valores, sucs);
 

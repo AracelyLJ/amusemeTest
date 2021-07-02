@@ -1006,11 +1006,15 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
         dialog.setContentView(R.layout.cardview_message);
         // Editar texto
         TextView finalMsg = dialog.findViewById(R.id.textView2);
+        realizarCalculosSemanales("HOLIIIS");
+
         if (!sucFaltantes.isEmpty())
             finalMsg.setText("Se terminó de registrar la sucursal: "+sucursalMaqActual+" \n\n Te faltan: \n"+strSucFalt);
         else {
             finalMsg.setText("Se terminó de registrar la sucursal: " + sucursalMaqActual + " \n\n ¡TERMINASTE DE REGISTRAR TODAS LAS SUCURSALES!");
             finalMsg.setTextColor(getResources().getColor(R.color.colorRojo));
+            ThreadCorreo tc = new ThreadCorreo(3);
+            new Thread(tc).start();
         }
 //        //boton para cerrar dialog
 //        ImageView close = dialog.findViewById(R.id.imageView);
@@ -1029,12 +1033,11 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
             @Override
             public void onClick(View v) {
                 //dineroPorPagar();
-                realizarCalculosSemanales("Calculando...");
+
                 if (sucFaltantes.isEmpty()){
                     firebaseData.ref.child("usuarios").child(firebaseData.currentUserID).child("sucRegistradas").setValue("");
                     // Se mandan los cálculos
-                    ThreadCorreo tc = new ThreadCorreo(3);
-                    new Thread(tc).start();
+
                 }else{
                     firebaseData.ref.child("usuarios").child(firebaseData.currentUserID).child("sucRegistradas").
                             setValue(getStringSucReg()+aliasMaqActual.charAt(0)+""+aliasMaqActual.charAt(1)+",");
