@@ -677,15 +677,13 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
             ThreadSMS tsms = new ThreadSMS("4751073063","--IMPORTANTE-- SE HAN GANADO PREMIOS EN LA MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)
                     + " DE LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+"\nREGISTRADO POR USUARIO"+firebaseData.getUsuarioActivo());
             new Thread(tsms).start();
-           tsms = new ThreadSMS("4491057920","--IMPORTANTE-- SE HAN GANADO PREMIOS EN LA MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)
-                    + " DE LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+"\nREGISTRADO POR USUARIO"+firebaseData.getUsuarioActivo());
-            new Thread(tsms).start();
-            tsms = new ThreadSMS("4492121134","--IMPORTANTE-- SE HAN GANADO PREMIOS EN LA MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)
-                    + " DE LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+"\nREGISTRADO POR USUARIO"+firebaseData.getUsuarioActivo());
-            new Thread(tsms).start();
+//           tsms = new ThreadSMS("4491057920","--IMPORTANTE-- SE HAN GANADO PREMIOS EN LA MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)
+//                    + " DE LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+"\nREGISTRADO POR USUARIO"+firebaseData.getUsuarioActivo());
+//            new Thread(tsms).start();
+//            tsms = new ThreadSMS("4492121134","--IMPORTANTE-- SE HAN GANADO PREMIOS EN LA MAQUINA: "+firebaseData.getTipoByAlias(aliasMaqActual)
+//                    + " DE LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual)+"\nREGISTRADO POR USUARIO"+firebaseData.getUsuarioActivo());
+//            new Thread(tsms).start();
         }
-
-
         return contValues;
     }
     public void dialogoValores(){
@@ -807,10 +805,12 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
         }else{
             ThreadSMS tsms = new ThreadSMS("4751073063","SE TERMINO DE REGISTRAR LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual));
             new Thread(tsms).start();
-            tsms = new ThreadSMS("4492121134","SE TERMINO DE REGISTRAR LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual));
-            new Thread(tsms).start();
-            tsms = new ThreadSMS("4491057920","SE TERMINO DE REGISTRAR LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual));
-            new Thread(tsms).start();
+//            tsms = new ThreadSMS("4492121134","SE TERMINO DE REGISTRAR LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual));
+//            new Thread(tsms).start();
+//            tsms = new ThreadSMS("4491057920","SE TERMINO DE REGISTRAR LA SUCURSAL: "+firebaseData.getSucursalByAlias(aliasMaqActual));
+//            new Thread(tsms).start();
+
+
             firebaseData.cleanCollection("temp_Registradas_"+firebaseData.currentUserID);
             mensajeFinal();
         }
@@ -819,8 +819,22 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
     public boolean hay_cont_menor(HashMap<String,String> contAnteriores,HashMap<String, String>contActuales){
         if (semana1.size()==0) return false;
         for (HashMap.Entry<String, String> entry : contValues.entrySet()) {
-            Integer anterior = Integer.parseInt(contAnteriores.get(entry.getKey()));
-            Integer actual = Integer.parseInt(contActuales.get(entry.getKey()));
+            int anterior;
+            try {
+                anterior = Integer.parseInt(contActuales.get(entry.getKey()));
+            }catch (Exception e){
+                anterior = Integer.parseInt(contAnteriores.get(entry.getKey()));
+            }
+//            if (Objects.equals(contAnteriores.get(entry.getKey()), "null")){
+//                anterior = Integer.parseInt(contActuales.get(entry.getKey()));
+//            }else{
+//                anterior = Integer.parseInt(contAnteriores.get(entry.getKey()));
+//            }
+            int actual = Integer.parseInt(contActuales.get(entry.getKey()));
+//            Toast.makeText(getApplicationContext(), entry.getKey()+ "  "+entry.getValue(), Toast.LENGTH_SHORT).show();
+//            Toast.makeText(getApplicationContext(), "anterior:  "+anterior, Toast.LENGTH_SHORT).show();
+//            Toast.makeText(getApplicationContext(), "actual:  "+actual, Toast.LENGTH_SHORT).show();
+
             if (actual<anterior){
                 Global.dialogo("El valor "+entry.getKey()+" es menor al valor registrado anteriormente. Por favor, corrige el dato.",RegistrarContadores.this);
                 return true;
@@ -831,8 +845,18 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
     public boolean saca_premio(HashMap<String,String> contAnteriores,HashMap<String, String>contActuales){
         if (semana1.size()==0) return false;
         for (HashMap.Entry<String, String> entry : contValues.entrySet()){
-            Integer pAnterior = Integer.parseInt(contAnteriores.get("*prizes"));
-            Integer pActual   = Integer.parseInt(contActuales.get("*prizes"));
+            int pAnterior;
+            try {
+                pAnterior = Integer.parseInt(contActuales.get("*prizes"));
+            }catch (Exception e){
+                pAnterior = Integer.parseInt(contAnteriores.get("*prizes"));
+            }
+//            if (Objects.equals(contAnteriores.get(entry.getKey()), "null")){
+//                pAnterior = Integer.parseInt(contActuales.get("*prizes"));
+//            }else{
+//                pAnterior = Integer.parseInt(contAnteriores.get("*prizes"));
+//            }
+            int pActual   = Integer.parseInt(contActuales.get("*prizes"));
             if (pActual>pAnterior){
                 // Toast.makeText(getApplicationContext(), "SI hubo premios", Toast.LENGTH_SHORT).show();
                 return true;
@@ -1006,7 +1030,7 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
         dialog.setContentView(R.layout.cardview_message);
         // Editar texto
         TextView finalMsg = dialog.findViewById(R.id.textView2);
-        realizarCalculosSemanales("HOLIIIS");
+        realizarCalculosSemanales("ñacañaca");
 
         if (!sucFaltantes.isEmpty())
             finalMsg.setText("Se terminó de registrar la sucursal: "+sucursalMaqActual+" \n\n Te faltan: \n"+strSucFalt);
@@ -1104,11 +1128,11 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
         correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación",destinatarioCorreo, mensaje_str);
         correo.enviarCorreo();
 
-        correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación", "gencovending@gmail.com", mensaje_str);
-        correo.enviarCorreo();
-
-        correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación", "diazserranoricardo1@gmail.com", mensaje_str);
-        correo.enviarCorreo();
+//        correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación", "gencovending@gmail.com", mensaje_str);
+//        correo.enviarCorreo();
+//
+//        correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación", "diazserranoricardo1@gmail.com", mensaje_str);
+//        correo.enviarCorreo();
 
     }
     public void correosTerminar(){
@@ -1116,11 +1140,11 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
         correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación",destinatarioCorreo, msjFinalCorreo);
         correo.enviarCorreo();
 
-        correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación\"","gencovending@gmail.com", msjFinalCorreo);
-        correo.enviarCorreo();
-
-        correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación\"","diazserranoricardo1@gmail.com", msjFinalCorreo);
-        correo.enviarCorreo();
+//        correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación\"","gencovending@gmail.com", msjFinalCorreo);
+//        correo.enviarCorreo();
+//
+//        correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación\"","diazserranoricardo1@gmail.com", msjFinalCorreo);
+//        correo.enviarCorreo();
     }
     public void correosNoSemanaAnterior(){
         if (Global.direccion == null)
@@ -1135,11 +1159,11 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
         correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación",destinatarioCorreo, mensaje_str);
         correo.enviarCorreo();
 
-        correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación","gencovending@gmail.com", mensaje_str);
-        correo.enviarCorreo();
-
-        correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación","diazserranoricardo1@gmail.com", mensaje_str);
-        correo.enviarCorreo();
+//        correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación","gencovending@gmail.com", mensaje_str);
+//        correo.enviarCorreo();
+//
+//        correo = new EnviarCorreo("***REGISTRO*** AmuseMe Notificación","diazserranoricardo1@gmail.com", mensaje_str);
+//        correo.enviarCorreo();
     }
     public void correosCalculosSemanales(){
         SimpleDateFormat yy = new SimpleDateFormat("YYYY");
@@ -1172,11 +1196,11 @@ public class RegistrarContadores extends AppCompatActivity implements View.OnCli
                 destinatarioCorreo, mensaje_str);
         correo.enviarCorreo();
 
-        correo = new EnviarCorreo("$$$ SUCURSALES REGISTRADAS $$$ AmuseMe Notificación","gencovending@gmail.com", mensaje_str);
-        correo.enviarCorreo();
-
-        correo = new EnviarCorreo("$$$ SUCURSALES REGISTRADAS $$$ AmuseMe Notificación","diazserranoricardo1@gmail.com", mensaje_str);
-        correo.enviarCorreo();
+//        correo = new EnviarCorreo("$$$ SUCURSALES REGISTRADAS $$$ AmuseMe Notificación","gencovending@gmail.com", mensaje_str);
+//        correo.enviarCorreo();
+//
+//        correo = new EnviarCorreo("$$$ SUCURSALES REGISTRADAS $$$ AmuseMe Notificación","diazserranoricardo1@gmail.com", mensaje_str);
+//        correo.enviarCorreo();
 
     }
 
